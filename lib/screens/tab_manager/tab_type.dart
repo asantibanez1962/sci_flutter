@@ -1,0 +1,1 @@
+enum TabType { entities, list, edit, create }
