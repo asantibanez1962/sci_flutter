@@ -2,11 +2,17 @@ class FieldDefinition {
   final int id;
   final String name;
   final String label;
-  final String dataType;        // string, int, decimal, bool, datetime, lookup, relation
+  final String dataType;
   final bool isRequired;
   final bool isAutocomplete;
 
   final List<Map<String, dynamic>>? options;
+
+  // ⭐ Lookup dinámico
+  final String? lookupEntity;
+  final String? lookupLabelField;
+  List<String>? lookupDisplayFields; // ej: ["Nombre", "Identidad"]
+  
 
   FieldDefinition({
     required this.id,
@@ -16,11 +22,14 @@ class FieldDefinition {
     required this.isRequired,
     required this.isAutocomplete,
     this.options,
-  });
+    this.lookupEntity,
+    this.lookupLabelField,
+    this.lookupDisplayFields,
+    });
 
   factory FieldDefinition.fromJson(Map<String, dynamic> json) {
+    // Opciones (para dropdowns simples)
     List<Map<String, dynamic>>? parsedOptions;
-
     if (json['options'] != null && json['options'] is List) {
       parsedOptions = (json['options'] as List)
           .map((o) {
@@ -35,13 +44,22 @@ class FieldDefinition {
     }
 
     return FieldDefinition(
-      id: json['id'] ?? 0,                         // 👈 DEFAULT SEGURO
-      name: json['name'] ?? json['field'] ?? "",   // 👈 FALLBACK
-      label: json['label'] ?? json['name'] ?? "",  // 👈 FALLBACK
-      dataType: json['dataType'] ?? "string",      // 👈 DEFAULT
-      isRequired: json['isRequired'] ?? false,     // 👈 DEFAULT
-      isAutocomplete: json['isAutocomplete'] ?? false, // 👈 DEFAULT
+      id: json['id'] ?? 0,
+
+      // 👇 AQUÍ ESTÁ LA CLAVE
+      name: json['name'] ?? json['field'] ?? "",
+
+      label: json['label'] ?? json['name'] ?? "",
+      dataType: json['dataType'] ?? "string",
+      isRequired: json['isRequired'] ?? false,
+      isAutocomplete: json['isAutocomplete'] ?? false,
       options: parsedOptions,
+
+      lookupEntity: json['lookupEntity'],
+      lookupLabelField: json['lookupLabelField'],
+      lookupDisplayFields: json['lookupDisplayFields'] != null
+        ? List<String>.from(json['lookupDisplayFields'])
+        : null,
     );
   }
 

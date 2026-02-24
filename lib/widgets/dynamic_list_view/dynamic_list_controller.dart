@@ -1,12 +1,13 @@
-//import 'dart:convert';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 
 //import '../../api/api_client.dart';
 import '../../api/column_visibility_api.dart';
 import '../../filters/column_filter.dart';
-//import '../../models/filter_condition.dart';
+import '../../models/field_definition.dart';
 import '../../models/column_definition.dart';
-
+import '../../services/lookup_cache.dart';
 import 'utils/infer_type.dart';
 import '../../widgets/column_visibility_dialog.dart';
 
@@ -18,6 +19,8 @@ class DynamicListController {
   List<Map<String, dynamic>> rows = [];
   List<ColumnDefinition> columns = [];
   Map<String, ColumnFilter> columnFilters = {};
+  List<FieldDefinition> metadataFields = [];
+  Map<String, Map<int, String>> lookupMaps = {};
 
   String? sortColumn;
   bool sortAscending = true;
@@ -33,53 +36,48 @@ class DynamicListController {
   }
 
   Future<void> _loadData() async {
-    try {
-      final filtersJson =
-          columnFilters.values.map((f) => f.toJson()).toList();
+  try {
+    final filtersJson =
+        columnFilters.values.map((f) => f.toJson()).toList();
 
-      /*final data = await state.widget.api.getList(
-        state.widget.entity.name,
-        filters: filtersJson.isEmpty ? null : filtersJson,
-      );*/
+    // 1) Cargar metadata primero
 
+    final rawColumns = await state.widget.api.getColumns(state.widget.entity.name);
+
+    metadataFields = rawColumns
+      .map<FieldDefinition>((e) => FieldDefinition.fromJson(e))
+      .toList();
+    // 2) Cargar datos
     final List<Map<String, dynamic>> data =
-      List<Map<String, dynamic>>.from(
+        List<Map<String, dynamic>>.from(
       await state.widget.api.getList(
         state.widget.entity.name,
         filters: filtersJson.isEmpty ? null : filtersJson,
       ),
     );
-      if (data.isNotEmpty) {
-        rows = data.map((row) {
-          return row.map((key, value) {
-            final normalizedKey = key.toString().trim();
-            final fixedKey =
-                normalizedKey[0].toUpperCase() + normalizedKey.substring(1);
-            return MapEntry(fixedKey, value);
-          });
-        }).toList();
 
-        columns = rows.first.keys.map((c) {
-          final field = c.toString().trim();
-          final label = field[0].toUpperCase() + field.substring(1);
+    rows = data;
 
-          return ColumnDefinition(
-            field: field,
-            label: label,
-            visible: true,
-          );
-        }).toList();
+    // 3) Construir columnas desde metadata (NO desde rows)
+    columns = metadataFields.map((f) {
+      return ColumnDefinition(
+        field: f.name,
+        label: f.label,
+        visible: true,
+      );
+    }).toList();
 
-        await _loadColumnVisibility();
-        state.setState(() {});
-      } else {
-        state.setState(() => columns = []);
-      }
-    } catch (e) {
-      debugPrint("❌ Error cargando datos: $e");
-    }
+    // 4) Cargar lookups
+    await loadLookups();
+
+    // 5) Aplicar visibilidad guardada
+    await _loadColumnVisibility();
+
+    state.setState(() {});
+  } catch (e) {
+    debugPrint("❌ Error cargando datos: $e");
   }
-
+}
   Future<void> _loadColumnVisibility() async {
     final prefs =
         await columnApi.getColumnVisibility(state.widget.entity.name);
@@ -110,6 +108,42 @@ class DynamicListController {
     _loadData();
   }
 
+
+Future<void> loadLookups() async {
+  for (var f in metadataFields) {
+    if (f.dataType == "lookup" && f.lookupEntity != null) {
+      final entity = f.lookupEntity!;
+
+      // ⭐ 1) Si está en cache → usarlo
+      if (LookupCache.has(entity)) {
+        lookupMaps[f.name] = LookupCache.get(entity)!;
+        continue;
+      }
+
+      // ⭐ 2) Si no está en cache → cargar del backend
+      final url = Uri.parse("${state.widget.api.baseUrl}/lookup/$entity");
+      final res = await http.get(url);
+
+      if (res.statusCode != 200 || res.body.isEmpty) {
+        lookupMaps[f.name] = {};
+        continue;
+      }
+
+      final list = jsonDecode(res.body) as List;
+
+      final map = {
+        for (var item in list)
+          item["id"] as int: item["label"] as String
+      };
+
+      // ⭐ 3) Guardar en cache
+      LookupCache.set(entity, map);
+
+      // ⭐ 4) Guardar en controller
+      lookupMaps[f.name] = map;
+    }
+  }
+}
   void sortByColumn(String column, {bool? ascending}) {
     if (ascending != null) {
       sortAscending = ascending;

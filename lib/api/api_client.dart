@@ -160,4 +160,51 @@ Future<List<Map<String, dynamic>>> getColumns(String entity) async {
   return List<Map<String, dynamic>>.from(jsonDecode(response.body));
 }
 
+
+Future<List<Map<String, dynamic>>> getLookupRows(
+  String entity,
+  List<String> displayFields,
+) async {
+  final url = Uri.parse("$baseUrl/lookup/$entity");
+
+  final body = jsonEncode({"fields": displayFields});
+  debugPrint(">>> SENDING BODY = $body");
+
+  final res = await http.post(
+    url,
+    headers: {"Content-Type": "application/json"},
+    body: body,
+  );
+
+  debugPrint(">>> STATUS = ${res.statusCode}");
+  debugPrint(">>> RAW BODY LENGTH = ${res.body.length}");
+  debugPrint(">>> RAW BODY = '${res.body}'"); // notar comillas
+
+  if (res.statusCode != 200) {
+    debugPrint(">>> ERROR RESPONSE");
+    return [];
+  }
+
+  if (res.body.isEmpty) {
+    debugPrint(">>> EMPTY BODY");
+    return [];
+  }
+
+  dynamic decoded;
+
+  try {
+    decoded = jsonDecode(res.body);
+  } catch (e) {
+    debugPrint(">>> JSON ERROR: $e");
+    return [];
+  }
+
+  if (decoded is! List) {
+    debugPrint(">>> NOT A LIST: $decoded");
+    return [];
+  }
+
+  return List<Map<String, dynamic>>.from(decoded);
+}
+
 }

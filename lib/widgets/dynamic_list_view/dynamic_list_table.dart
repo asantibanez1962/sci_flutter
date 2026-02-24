@@ -85,8 +85,22 @@ class DynamicListTable extends StatelessWidget {
               cells: controller.columns
                   .where((c) => c.visible)
                   .map((col) {
+                final value = row[col.field];
+
+                // ⭐ Lookup dinámico
+                if (controller.lookupMaps.containsKey(col.field)) {
+                  final map = controller.lookupMaps[col.field]!;
+                  final label = map[value] ?? value.toString();
+
+                  return DataCell(
+                    Text(label),
+                    onTap: () => onEdit(Map<String, dynamic>.from(row)),
+                  );
+                }
+
+                // ⭐ Valor normal
                 return DataCell(
-                  buildCellValue(row[col.field]),
+                  buildCellValue(value),
                   onTap: () => onEdit(Map<String, dynamic>.from(row)),
                 );
               }).toList(),
