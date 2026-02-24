@@ -9,6 +9,9 @@ class DynamicFieldWidget extends StatelessWidget {
   final Function(dynamic) onChanged;
   final List<Map<String, dynamic>>? options; // para dropdown/autocomplete
 
+ // ⭐ Nuevo parámetro
+  final bool isModified;
+
   const DynamicFieldWidget({
     super.key,
     required this.label,
@@ -17,6 +20,8 @@ class DynamicFieldWidget extends StatelessWidget {
     this.value,
     required this.onChanged,
     this.options,
+    this.isModified = false, // ⭐ default
+
   });
 
   @override
@@ -52,6 +57,12 @@ class DynamicFieldWidget extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
+        fillColor: isModified ? Colors.orange.shade100 : null,
+        filled: isModified,
+        prefixIcon: isModified
+            ? const Icon(Icons.warning_amber, color: Colors.orange)
+            : null,
+
       ),
       onChanged: onChanged,
     );
@@ -65,6 +76,13 @@ class DynamicFieldWidget extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
+        fillColor: isModified ? Colors.orange.shade100 : null,
+        filled: isModified,
+        prefixIcon: isModified
+            ? const Icon(Icons.warning_amber, color: Colors.orange)
+            : null,
+
+
       ),
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
@@ -115,6 +133,12 @@ class DynamicFieldWidget extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
+          fillColor: isModified ? Colors.orange.shade100 : null,
+          filled: isModified ,
+          prefixIcon: isModified
+            ? const Icon(Icons.warning_amber, color: Colors.orange)
+            : null,
+
         ),
         child: Text(
           value != null
@@ -130,7 +154,15 @@ class DynamicFieldWidget extends StatelessWidget {
     return DropdownButtonFormField(
       decoration: InputDecoration(
         labelText: label,
-        border: const OutlineInputBorder(),
+        border: const OutlineInputBorder(), // ⭐ borde ovalado
+        enabledBorder: const OutlineInputBorder(),
+        focusedBorder: const OutlineInputBorder(),
+        fillColor: isModified ? Colors.orange.shade100 : null,
+        filled: isModified,
+        prefixIcon: isModified
+            ? const Icon(Icons.warning_amber, color: Colors.orange)
+            : null,
+
       ),
       initialValue: value,
       items: options?.map((opt) {
@@ -160,6 +192,14 @@ class DynamicFieldWidget extends StatelessWidget {
           decoration: InputDecoration(
             labelText: label,
             border: const OutlineInputBorder(),
+            enabledBorder: const OutlineInputBorder(),
+            focusedBorder: const OutlineInputBorder(),
+            fillColor: isModified ? Colors.orange.shade100 : null,
+            filled: isModified,
+            prefixIcon: isModified
+              ? const Icon(Icons.warning_amber, color: Colors.orange)
+              : null,
+    
           ),
         );
       },

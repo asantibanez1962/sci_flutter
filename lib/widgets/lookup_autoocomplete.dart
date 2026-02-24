@@ -5,6 +5,8 @@ class LookupAutocomplete extends StatefulWidget {
   final Map<int, String> lookupMap;
   final int? value;
   final Function(int?) onChanged;
+ final bool isModified;
+
 
   const LookupAutocomplete({
     super.key,
@@ -12,6 +14,8 @@ class LookupAutocomplete extends StatefulWidget {
     required this.lookupMap,
     required this.value,
     required this.onChanged,
+    this.isModified = false, // ⭐ default
+
   });
 
   @override
@@ -50,10 +54,20 @@ class _LookupAutocompleteState extends State<LookupAutocomplete> {
         userIsTyping = false; // reset
       },
 
-      fieldViewBuilder: (context, controller, focusNode, onSubmit) {
-        return TextField(
-          controller: controller,
+      fieldViewBuilder: (context, textcontroller, focusNode, onFieldSubmitted) {
+        return TextFormField(
+          controller: textcontroller,
           focusNode: focusNode,
+          decoration: InputDecoration(
+                labelText: widget.label,
+                border: const OutlineInputBorder(),
+                enabledBorder: const OutlineInputBorder(),
+                focusedBorder: const OutlineInputBorder(),
+
+                // ⭐ Color dinámico según cambios
+                fillColor: widget.isModified ? Colors.orange.shade100 : null,
+                filled: widget.isModified,
+              ),
 
           // ⭐ Permitir escribir para filtrar
           readOnly: false,
@@ -69,7 +83,7 @@ class _LookupAutocompleteState extends State<LookupAutocomplete> {
             setState(() => userIsTyping = true);
           },
 
-          decoration: InputDecoration(labelText: widget.label),
+          //decoration: InputDecoration(labelText: widget.label),
         );
       },
     );

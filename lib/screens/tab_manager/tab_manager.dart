@@ -30,6 +30,7 @@ class _TabManagerState extends State<TabManager>
 
   late TabController controller;
   final List<TabItem> tabs = [];
+  final formKey = GlobalKey<DynamicFormViewState>();
 
   bool _restoring = false;
   bool _initialized = false;
@@ -189,6 +190,8 @@ void _openEditTab(
 
   // 🔥 Guardamos el ID de la pestaña de lista (NO el índice)
   final listTabId = tabs[controller.index].id;
+//para el control de mensaje de cambios antes de cerrar si no están grabados los cambios
+  final formKey = GlobalKey<DynamicFormViewState>();
 
   tabs.add(
     TabItem(
@@ -197,22 +200,25 @@ void _openEditTab(
       icon: tabIcon(TabType.edit),
       color: tabColor(TabType.edit),
       closable: true,
+      formKey: formKey,   // ⭐ AQUI
       view: DynamicFormView(
+        key: formKey,     // ⭐ AQUI
         api: widget.api,
         entity: entity,
         initialData: row,
+        onClose: () async{
+            // 1. Obtener el state del DynamicFormView
+             final ok = await formKey.currentState?.attemptClose() ?? true;
+            if (!ok) return; // ❌ Usuario canceló
 
-        onClose: () {
-          // 1. Cerrar la pestaña actual
+          // 2. Cerrar la pestaña actual
           final editIndex = tabs.indexWhere((t) => t.id == tabId);
           if (editIndex != -1) {
             _closeTab(editIndex);
           }
 
-          // 2. Buscar la pestaña de lista por ID
+          // 3. Buscar la pestaña de lista por ID
           final listIndex = tabs.indexWhere((t) => t.id == listTabId);
-
-          // 3. Regresar a la pestaña de lista correcta
           if (listIndex != -1) {
             controller.animateTo(listIndex);
           }
@@ -233,6 +239,8 @@ void _openCreateTab(EntityDefinition entity, {bool save = true}) {
 
   // 🔥 Guardamos el ID de la pestaña de lista (NO el índice)
   final listTabId = tabs[controller.index].id;
+//para el control de mensaje de cambios antes de cerrar si no están grabados los cambios
+  final formKey = GlobalKey<DynamicFormViewState>();
 
   tabs.add(
     TabItem(
@@ -245,18 +253,20 @@ void _openCreateTab(EntityDefinition entity, {bool save = true}) {
         api: widget.api,
         entity: entity,
         initialData: null,
+        key: formKey,  
+        onClose: () async {
+            // 1. Obtener el state del DynamicFormView
+            final ok = await formKey.currentState?.attemptClose() ?? true;
+            if (!ok) return; // ❌ Usuario canceló
 
-        onClose: () {
-          // 1. Cerrar la pestaña actual (la de creación)
+          // 2. Cerrar la pestaña actual (la de creación)
           final editIndex = tabs.indexWhere((t) => t.id == tabId);
           if (editIndex != -1) {
             _closeTab(editIndex);
           }
 
-          // 2. Buscar la pestaña de lista por ID
+          // 3. Buscar la pestaña de lista por ID
           final listIndex = tabs.indexWhere((t) => t.id == listTabId);
-
-          // 3. Regresar a la pestaña de lista correcta
           if (listIndex != -1) {
             controller.animateTo(listIndex);
           }
@@ -316,7 +326,15 @@ void _openCreateTab(EntityDefinition entity, {bool save = true}) {
                     Text(tabs[i].title),
                     if (tabs[i].closable)
                       GestureDetector(
-                        onTap: () => _closeTab(i),
+                       onTap: () async {
+                      // Si la vista tiene un onClose, llamarlo
+                        final key = tabs[i].formKey;
+                        if (key != null) {
+                              final ok = await key.currentState?.attemptClose() ?? true;
+                              if (!ok) return;
+                            }
+                          _closeTab(i);
+                        },
                         child: const Padding(
                           padding: EdgeInsets.only(left: 8),
                           child: Icon(Icons.close, size: 16),
