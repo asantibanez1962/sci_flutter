@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/dynamic_form_view.dart';
+import '../widgets/dynamic_form_view/dynamic_form_view.dart';
 class TabItem {
   final String id;
   final String title;
