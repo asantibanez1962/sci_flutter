@@ -61,7 +61,10 @@ class FieldDefinition {
       name: json['name'] ?? json['field'] ?? "",
 
       label: json['label'] ?? json['name'] ?? "",
-      dataType: json['dataType'] ?? "string",
+       dataType: normalizeType(
+        json['dataType'] ?? json['type'] ?? "string"
+      ),
+
       isRequired: json['isRequired'] ?? false,
       isAutocomplete: json['isAutocomplete'] ?? false,
       options: parsedOptions,
@@ -109,4 +112,23 @@ class FieldDefinition {
         return "text";
     }
   }
+
+  
+}
+String normalizeType(String t) {
+  t = t.toLowerCase();
+
+  if (t.contains("char") || t.contains("text")) return "string";
+
+  if (t.contains("int")) return "number";
+  if (t.contains("decimal") || t.contains("numeric") || t.contains("float"))
+    return "number";
+
+  if (t.contains("bit") || t == "bool" || t == "boolean")
+    return "bool";
+
+  if (t.contains("date") || t.contains("time"))
+    return "date";
+
+  return "string";
 }

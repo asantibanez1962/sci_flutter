@@ -152,6 +152,17 @@ class DynamicFormViewState extends State<DynamicFormView> {
         },
       );
     }
+        // boolean
+    if (field.fieldType == "bool") {
+      return BooleanField(
+        label: field.label,
+        value: (value ?? false) as bool,
+        modified: modified,
+        onChanged: (v) {
+          setState(() => controller.formData[name] = v);
+        },
+      );
+    }
 
 if (field.fieldType == "text") {
   return TextFieldWidget(

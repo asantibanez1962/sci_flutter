@@ -59,6 +59,8 @@ class DynamicListController {
       metadataFields = rawColumns
           .map<FieldDefinition>((e) => FieldDefinition.fromJson(e))
           .toList();
+  
+      debugPrint("Metadata types: ${metadataFields.map((f) => "${f.name}=${f.dataType}").toList()}");
 
       // 2) Cargar datos
       final List<Map<String, dynamic>> data =
@@ -70,6 +72,7 @@ class DynamicListController {
       );
 
       rows = data;
+      debugPrint("ROW RAW: ${data.first}");
 
       // 3) Construir columnas desde metadata (NO desde rows)
       columns = metadataFields.map((f) {
@@ -80,6 +83,8 @@ class DynamicListController {
         );
       }).toList();
 
+     
+      
       // 4) Cargar lookups
       await loadLookups();
 
@@ -103,10 +108,15 @@ class DynamicListController {
     final prefsMap = {for (var p in prefs) p["field"]: p["visible"]};
 
     for (var col in columns) {
+      /*
       if (prefsMap.containsKey(col.field)) {
         col.visible = prefsMap[col.field] as bool;
+      }*/
+      final v = prefsMap[col.field];
+      if (v is bool) {
+        col.visible = v;
       }
-    }
+          }
   }
 
 /*

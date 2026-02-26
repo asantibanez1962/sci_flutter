@@ -61,10 +61,10 @@ Future<EntityDefinition> getEntityMetadata(String entityName) async {
   // ---------------------------------------------
   if (filters == null || filters.isEmpty) {
     final url = Uri.parse('$baseUrl/data/$entity');
-    debugPrint("URL llamada (GET): $url");
+    //debugPrint("URL llamada (GET): $url");
 
     final res = await http.get(url);
-    debugPrint("Respuesta backend (GET): ${res.body}");
+    //debugPrint("Respuesta backend (GET): ${res.body}");
 
     final List<dynamic> data = jsonDecode(res.body);
 
@@ -85,8 +85,8 @@ Future<EntityDefinition> getEntityMetadata(String entityName) async {
   // ---------------------------------------------
   final url = Uri.parse('$baseUrl/data/$entity/filter');
 
-  debugPrint("URL llamada (POST FILTER): $url");
-  debugPrint("Body enviado: ${jsonEncode({"filters": filters})}");
+  //debugPrint("URL llamada (POST FILTER): $url");
+  //debugPrint("Body enviado: ${jsonEncode({"filters": filters})}");
 
   final res = await http.post(
     url,
@@ -94,7 +94,7 @@ Future<EntityDefinition> getEntityMetadata(String entityName) async {
     body: jsonEncode({"filters": filters}),
   );
 
-  debugPrint("Respuesta backend (FILTER): ${res.body}");
+  //debugPrint("Respuesta backend (FILTER): ${res.body}");
 
   final List<dynamic> data = jsonDecode(res.body);
 

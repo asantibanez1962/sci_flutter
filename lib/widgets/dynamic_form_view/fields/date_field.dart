@@ -16,24 +16,48 @@ class DateFieldWidget extends StatelessWidget {
     this.errorText,
   });
 
+  String _formatForDisplay(String iso) {
+    try {
+      final normalized = iso.replaceFirst("T", " ");
+      final date = DateTime.tryParse(normalized);
+      if (date == null) return iso;
+
+      // ⭐ Formato MM/dd/yyyy
+      return "${_two(date.day)}/${_two(date.month)}/${date.year}";
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  String _two(int n) => n.toString().padLeft(2, '0');
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: value != null ? DateTime.parse(value!) : DateTime.now(),
-          firstDate: DateTime(1900),
-          lastDate: DateTime(2100),
-        );
+        /*final initial = value != null
+            ? DateTime.tryParse(value!.replaceFirst("T", " ")) ?? DateTime.now()
+            : DateTime.now();*/
+
+            final picked = await showDatePicker(
+              context: context,
+              locale: const Locale('es', 'CR'), // ⭐ fuerza día/mes/año
+              initialDate: value != null
+                  ? DateTime.parse(value!.replaceFirst("T", " "))
+                  : DateTime.now(),
+              firstDate: DateTime(1900),
+              lastDate: DateTime(2100),
+            );
+
 
         if (picked != null) {
+          // ⭐ Enviar ISO al backend
           onChanged(picked.toIso8601String());
         }
       },
       child: InputDecorator(
         decoration: InputDecoration(
-          isDense: true, // ⭐ Aquí sí es válido
+          isDense: true,
           labelText: label,
           labelStyle: const TextStyle(fontSize: 13),
           errorText: errorText,
@@ -59,8 +83,10 @@ class DateFieldWidget extends StatelessWidget {
             minHeight: 32,
           ),
         ),
+
+        // ⭐ Mostrar MM/dd/yyyy
         child: Text(
-          value != null ? value!.substring(0, 10) : "Seleccione una fecha",
+          value != null   ? _formatForDisplay(value!) : "Seleccione una fecha",
           style: const TextStyle(fontSize: 13),
         ),
       ),

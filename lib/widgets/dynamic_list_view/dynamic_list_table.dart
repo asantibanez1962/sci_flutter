@@ -146,13 +146,15 @@ class DynamicListTable extends StatelessWidget {
                         fontWeight:
                             isHovered ? FontWeight.w600 : FontWeight.normal,
                       ),
-                      child: controller.lookupMaps.containsKey(col.field)
+                  child: () {
+                   //   debugPrint("CELL → field=${col.field}, lookup=${controller.lookupMaps.containsKey(col.field)}, value=$value");
+                      return controller.lookupMaps.containsKey(col.field)
                           ? Text(
                               controller.lookupMaps[col.field]![value] ??
                                   value.toString(),
                             )
-                          : buildCellValue(value),
-                    ),
+                          : buildCellValue(value);
+                    }(),                   ),
                   ),
                   onTap: () => onEdit(Map<String, dynamic>.from(row)),
                 );

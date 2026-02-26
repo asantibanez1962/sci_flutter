@@ -17,7 +17,7 @@ class BooleanField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), // ⭐ Compacto
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: modified ? Colors.orange.shade100 : null,
         borderRadius: BorderRadius.circular(4),
@@ -25,22 +25,24 @@ class BooleanField extends StatelessWidget {
           color: modified ? Colors.orange : Colors.grey.shade400,
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, // ⭐ label alineado a la izquierda
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13, // ⭐ Compacto
-                fontWeight: FontWeight.w500,
-                color: modified ? Colors.orange.shade900 : Colors.black87,
-              ),
+          // ⭐ Label arriba
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: modified ? Colors.orange.shade900 : Colors.black87,
             ),
           ),
 
-          // ⭐ Switch compacto
+          const SizedBox(height: 4),
+
+          // ⭐ Switch debajo del label
           Transform.scale(
-            scale: 0.75, // reduce tamaño del switch
+            scale: 0.75,
             child: Switch(
               value: value,
               onChanged: onChanged,
