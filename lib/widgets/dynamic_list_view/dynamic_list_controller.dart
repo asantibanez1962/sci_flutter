@@ -109,10 +109,31 @@ class DynamicListController {
     }
   }
 
+/*
   void applyFilter(ColumnFilter filter) {
+    print("Filtrando por campo: ${filter.field}");
+    print("Campos reales de la fila: ${rows.first.keys}");
     columnFilters[filter.field] = filter;
     _loadData();
   }
+*/
+Future<void> applyFilter(ColumnFilter filter) async {
+  print("Filtrando por campo: ${filter.field}");
+  print("Campos reales de la fila: ${rows.first.keys}");
+
+  columnFilters[filter.field] = filter;
+
+  final filtersJson = columnFilters.values.map((f) => f.toJson()).toList();
+
+  rows = await state.widget.api.getList(
+    state.widget.entity.name,
+    filters: filtersJson.isEmpty ? null : filtersJson,
+  );
+
+  if (!isDisposed && state.mounted) {
+    state.setState(() {});
+  }
+}
 
   void clearFilter(String field) {
     columnFilters.remove(field);

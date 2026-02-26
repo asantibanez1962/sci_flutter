@@ -53,40 +53,62 @@ Future<EntityDefinition> getEntityMetadata(String entityName) async {
 
   /// NUEVO: lista con soporte de filtros
   Future<List<Map<String, dynamic>>> getList(
-    String entity, {
-    List<Map<String, dynamic>>? filters,
-  }) async {
-    // Si no hay filtros, usamos el endpoint existente
-    if (filters == null || filters.isEmpty) {
-      return getData(entity);
-    }
+  String entity, {
+  List<Map<String, dynamic>>? filters,
+}) async {
+  // ---------------------------------------------
+  // 1) GET normal (sin filtros)
+  // ---------------------------------------------
+  if (filters == null || filters.isEmpty) {
+    final url = Uri.parse('$baseUrl/data/$entity');
+    debugPrint("URL llamada (GET): $url");
 
-    // Si hay filtros, llamamos a un endpoint de búsqueda
-    // Contrato sugerido: POST /data/{entity}/filter
-    final url = Uri.parse('$baseUrl/data/$entity/filter');
-    
-    debugPrint("URL llamada: $url");
-    debugPrint("Body enviado: ${jsonEncode({"filters": filters})}");
+    final res = await http.get(url);
+    debugPrint("Respuesta backend (GET): ${res.body}");
 
-    final res = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        "filters": filters,
-      }),
-    );
+    final List<dynamic> data = jsonDecode(res.body);
 
-    debugPrint("RAW LIST RESPONSE: ${res.body}");
+    // Normalizar claves y convertir LinkedMap → Map<String, dynamic>
+    return data.map<Map<String, dynamic>>((row) {
+      final map = Map<String, dynamic>.from(row as Map);
 
-
-    if (res.statusCode != 200) {
-      throw Exception('Error al obtener datos filtrados de $entity: ${res.body}');
-    }
-
-    final list = jsonDecode(res.body) as List<dynamic>;
-    return list.cast<Map<String, dynamic>>();
+      return map.map((key, value) {
+        final k = key.toString();
+        final normalizedKey = k[0].toUpperCase() + k.substring(1);
+        return MapEntry(normalizedKey, value);
+      });
+    }).toList();
   }
 
+  // ---------------------------------------------
+  // 2) POST /filter (con filtros)
+  // ---------------------------------------------
+  final url = Uri.parse('$baseUrl/data/$entity/filter');
+
+  debugPrint("URL llamada (POST FILTER): $url");
+  debugPrint("Body enviado: ${jsonEncode({"filters": filters})}");
+
+  final res = await http.post(
+    url,
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({"filters": filters}),
+  );
+
+  debugPrint("Respuesta backend (FILTER): ${res.body}");
+
+  final List<dynamic> data = jsonDecode(res.body);
+
+  // Normalizar claves y convertir LinkedMap → Map<String, dynamic>
+  return data.map<Map<String, dynamic>>((row) {
+    final map = Map<String, dynamic>.from(row as Map);
+
+    return map.map((key, value) {
+      final k = key.toString();
+      final normalizedKey = k[0].toUpperCase() + k.substring(1);
+      return MapEntry(normalizedKey, value);
+    });
+  }).toList();
+}
 
 Future<Map<String, dynamic>> saveData(
   String entity,
