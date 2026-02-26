@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 
-//import '../../api/api_client.dart';
 import '../../api/column_visibility_api.dart';
 import '../../filters/column_filter.dart';
 import '../../models/field_definition.dart';
@@ -15,6 +14,14 @@ class DynamicListController {
   final dynamic state;
 
   DynamicListController(this.state);
+
+  bool _disposed = false;
+
+  void dispose() {
+    _disposed = true;
+  }
+
+  bool get isDisposed => _disposed;
 
   List<Map<String, dynamic>> rows = [];
   List<ColumnDefinition> columns = [];
@@ -32,52 +39,58 @@ class DynamicListController {
     columnApi = ColumnVisibilityApi(baseUrl: state.widget.api.baseUrl);
     await _loadData();
     await _loadColumnVisibility();
-    state.setState(() {});
+    if (!isDisposed && state.mounted) {
+      state.setState(() {});
+    }
   }
 
   Future<void> _loadData() async {
-  try {
-    final filtersJson =
-        columnFilters.values.map((f) => f.toJson()).toList();
+    try {
+      final filtersJson =
+          columnFilters.values.map((f) => f.toJson()).toList();
 
-    // 1) Cargar metadata primero
+      // 1) Cargar metadata primero
+      final rawColumns =
+          await state.widget.api.getColumns(state.widget.entity.name);
 
-    final rawColumns = await state.widget.api.getColumns(state.widget.entity.name);
+      metadataFields = rawColumns
+          .map<FieldDefinition>((e) => FieldDefinition.fromJson(e))
+          .toList();
 
-    metadataFields = rawColumns
-      .map<FieldDefinition>((e) => FieldDefinition.fromJson(e))
-      .toList();
-    // 2) Cargar datos
-    final List<Map<String, dynamic>> data =
-        List<Map<String, dynamic>>.from(
-      await state.widget.api.getList(
-        state.widget.entity.name,
-        filters: filtersJson.isEmpty ? null : filtersJson,
-      ),
-    );
-
-    rows = data;
-
-    // 3) Construir columnas desde metadata (NO desde rows)
-    columns = metadataFields.map((f) {
-      return ColumnDefinition(
-        field: f.name,
-        label: f.label,
-        visible: true,
+      // 2) Cargar datos
+      final List<Map<String, dynamic>> data =
+          List<Map<String, dynamic>>.from(
+        await state.widget.api.getList(
+          state.widget.entity.name,
+          filters: filtersJson.isEmpty ? null : filtersJson,
+        ),
       );
-    }).toList();
 
-    // 4) Cargar lookups
-    await loadLookups();
+      rows = data;
 
-    // 5) Aplicar visibilidad guardada
-    await _loadColumnVisibility();
+      // 3) Construir columnas desde metadata (NO desde rows)
+      columns = metadataFields.map((f) {
+        return ColumnDefinition(
+          field: f.name,
+          label: f.label,
+          visible: true,
+        );
+      }).toList();
 
-    state.setState(() {});
-  } catch (e) {
-    debugPrint("❌ Error cargando datos: $e");
+      // 4) Cargar lookups
+      await loadLookups();
+
+      // 5) Aplicar visibilidad guardada
+      await _loadColumnVisibility();
+
+      if (!isDisposed && state.mounted) {
+        state.setState(() {});
+      }
+    } catch (e) {
+      debugPrint("❌ Error cargando datos: $e");
+    }
   }
-}
+
   Future<void> _loadColumnVisibility() async {
     final prefs =
         await columnApi.getColumnVisibility(state.widget.entity.name);
@@ -108,42 +121,38 @@ class DynamicListController {
     _loadData();
   }
 
+  Future<void> loadLookups() async {
+    for (var f in metadataFields) {
+      if (f.dataType == "lookup" && f.lookupEntity != null) {
+        final entity = f.lookupEntity!;
 
-Future<void> loadLookups() async {
-  for (var f in metadataFields) {
-    if (f.dataType == "lookup" && f.lookupEntity != null) {
-      final entity = f.lookupEntity!;
+        if (LookupCache.has(entity)) {
+          lookupMaps[f.name] = LookupCache.get(entity)!;
+          continue;
+        }
 
-      // ⭐ 1) Si está en cache → usarlo
-      if (LookupCache.has(entity)) {
-        lookupMaps[f.name] = LookupCache.get(entity)!;
-        continue;
+        final url =
+            Uri.parse("${state.widget.api.baseUrl}/lookup/$entity");
+        final res = await http.get(url);
+
+        if (res.statusCode != 200 || res.body.isEmpty) {
+          lookupMaps[f.name] = {};
+          continue;
+        }
+
+        final list = jsonDecode(res.body) as List;
+
+        final map = {
+          for (var item in list)
+            item["id"] as int: item["label"] as String
+        };
+
+        LookupCache.set(entity, map);
+        lookupMaps[f.name] = map;
       }
-
-      // ⭐ 2) Si no está en cache → cargar del backend
-      final url = Uri.parse("${state.widget.api.baseUrl}/lookup/$entity");
-      final res = await http.get(url);
-
-      if (res.statusCode != 200 || res.body.isEmpty) {
-        lookupMaps[f.name] = {};
-        continue;
-      }
-
-      final list = jsonDecode(res.body) as List;
-
-      final map = {
-        for (var item in list)
-          item["id"] as int: item["label"] as String
-      };
-
-      // ⭐ 3) Guardar en cache
-      LookupCache.set(entity, map);
-
-      // ⭐ 4) Guardar en controller
-      lookupMaps[f.name] = map;
     }
   }
-}
+
   void sortByColumn(String column, {bool? ascending}) {
     if (ascending != null) {
       sortAscending = ascending;
@@ -165,7 +174,9 @@ Future<void> loadLookups() async {
       return 0;
     });
 
-    state.setState(() {});
+    if (!isDisposed && state.mounted) {
+      state.setState(() {});
+    }
   }
 
   Future<String?> promptValue(String title, String column) async {
@@ -203,7 +214,10 @@ Future<void> loadLookups() async {
     );
 
     if (result == true) {
-      state.setState(() => tableVisible = false);
+      if (!isDisposed && state.mounted) {
+        state.setState(() => tableVisible = false);
+      }
+
       await Future.delayed(const Duration(milliseconds: 150));
 
       final payload = columns
@@ -215,7 +229,9 @@ Future<void> loadLookups() async {
 
       await _loadColumnVisibility();
 
-      state.setState(() => tableVisible = true);
+      if (!isDisposed && state.mounted) {
+        state.setState(() => tableVisible = true);
+      }
     }
   }
 

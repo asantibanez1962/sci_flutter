@@ -14,6 +14,9 @@ class EntityDefinition {
   });
 
   factory EntityDefinition.fromJson(Map<String, dynamic> json) {
+   //  print("JSON EN EntityDefinition.fromJson:");
+    //print(json);
+
     return EntityDefinition(
       name: json['name'],
       displayName: json['displayName'],

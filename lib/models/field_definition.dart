@@ -12,7 +12,12 @@ class FieldDefinition {
   final String? lookupEntity;
   final String? lookupLabelField;
   List<String>? lookupDisplayFields; // ej: ["Nombre", "Identidad"]
-  
+  final int? minLength;
+  final int? maxLength;
+  final double? minValue;
+  final double? maxValue;
+  final String? regex;
+
 
   FieldDefinition({
     required this.id,
@@ -25,10 +30,17 @@ class FieldDefinition {
     this.lookupEntity,
     this.lookupLabelField,
     this.lookupDisplayFields,
+    this.minLength,
+    this.maxLength,
+    this.minValue,
+    this.maxValue,
+    this.regex,
+
     });
 
   factory FieldDefinition.fromJson(Map<String, dynamic> json) {
     // Opciones (para dropdowns simples)
+    //print(json);
     List<Map<String, dynamic>>? parsedOptions;
     if (json['options'] != null && json['options'] is List) {
       parsedOptions = (json['options'] as List)
@@ -46,7 +58,6 @@ class FieldDefinition {
     return FieldDefinition(
       id: json['id'] ?? 0,
 
-      // 👇 AQUÍ ESTÁ LA CLAVE
       name: json['name'] ?? json['field'] ?? "",
 
       label: json['label'] ?? json['name'] ?? "",
@@ -60,6 +71,11 @@ class FieldDefinition {
       lookupDisplayFields: json['lookupDisplayFields'] != null
         ? List<String>.from(json['lookupDisplayFields'])
         : null,
+       minLength: json['minLength'],
+       maxLength: json['maxLength'],
+       minValue: json['minValue'] != null ? (json['minValue'] as num).toDouble() : null,
+       maxValue: json['maxValue'] != null ? (json['maxValue'] as num).toDouble() : null,
+       regex: json['regex'],
     );
   }
 

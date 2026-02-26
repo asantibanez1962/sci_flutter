@@ -8,34 +8,47 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final api = ApiClient(baseUrl: "http://localhost:5249");
+  State<MyApp> createState() => _MyAppState();
+}
 
+class _MyAppState extends State<MyApp> {
+  final api = ApiClient(baseUrl: "http://localhost:5249");
+
+  List<EntityDefinition>? entities;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEntities();
+  }
+
+  Future<void> _loadEntities() async {
+    final result = await api.getEntities();
+    setState(() {
+      entities = result;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ERP Dinámico',
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
       ),
-      home: FutureBuilder<List<EntityDefinition>>(
-        future: api.getEntities(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Scaffold(
+      home: entities == null
+          ? const Scaffold(
               body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          return TabManager(
-            api: api,
-            entities: snapshot.data!,
-          );
-        },
-      ),
+            )
+          : TabManager(
+              api: api,
+              entities: entities!,
+            ),
     );
   }
 }

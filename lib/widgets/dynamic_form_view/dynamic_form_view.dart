@@ -10,6 +10,8 @@ import 'fields/text_field.dart';
 import 'fields/number_field.dart';
 import 'fields/date_field.dart';
 import 'fields/autocomplete_field.dart';
+import 'validation/field_validator.dart';
+
 
 class DynamicFormView extends StatefulWidget {
   final ApiClient api;
@@ -86,7 +88,7 @@ class DynamicFormViewState extends State<DynamicFormView> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: _save,
+                  onPressed: hasValidationErrors ? null : _save,
                   child: const Text("Guardar"),
                 ),
               ],
@@ -101,7 +103,8 @@ class DynamicFormViewState extends State<DynamicFormView> {
     final name = field.name;
     final value = controller.formData[name];
     final modified = controller.isModified(name);
-
+    final error = FieldValidator.validate(field, value);
+    //print("Field en _buildField: ${field.name} minLength=${field.minLength}");
     // lookup: esperar a que carguen
     if (field.dataType == "lookup" && !controller.lookupsLoaded) {
       return const Center(child: CircularProgressIndicator());
@@ -145,8 +148,11 @@ if (field.fieldType == "text") {
     label: field.label,
     controller: controller.controllers[name]!,
     modified: modified,
+    errorText: error,
     onChanged: (v) {
-      setState(() => controller.formData[name] = v);
+        setState(() {
+        controller.formData[name] = v;
+      });
     },
   );
 }
@@ -218,8 +224,38 @@ if (field.fieldType == "autocomplete") {
     return result ?? false;
   }
 
-  Future<bool> attemptClose() async {
-    if (!controller.hasUnsavedChanges) return true;
-    return await _confirmExit();
+ bool get hasValidationErrors {
+  for (var field in widget.entity.fields) {
+    final value = controller.formData[field.name];
+    final error = FieldValidator.validate(field, value);
+    if (error != null) return true;
   }
+  return false;
+}
+
+Future<bool> attemptClose() async {
+  // 1. Si hay errores de validación → bloquear cierre
+  if (hasValidationErrors) {
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Errores en el formulario"),
+        content: const Text("Corrija los errores antes de cerrar."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Aceptar"),
+          ),
+        ],
+      ),
+    );
+    return false; // ❌ No permitir cerrar
+  }
+
+  // 2. Si NO hay cambios → permitir cerrar
+  if (!controller.hasUnsavedChanges) return true;
+
+  // 3. Si hay cambios → pedir confirmación
+  return await _confirmExit();
+ }
 }

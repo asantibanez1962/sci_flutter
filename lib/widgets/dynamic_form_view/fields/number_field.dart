@@ -5,6 +5,7 @@ class NumberFieldWidget extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final bool modified;
+  final String? errorText;
   final ValueChanged<double?> onChanged;
 
   const NumberFieldWidget({
@@ -13,6 +14,7 @@ class NumberFieldWidget extends StatelessWidget {
     required this.controller,
     required this.modified,
     required this.onChanged,
+      this.errorText,
   });
 
   @override
@@ -22,6 +24,7 @@ class NumberFieldWidget extends StatelessWidget {
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(
         labelText: label,
+        errorText: errorText,
         border: const OutlineInputBorder(),
         fillColor: modified ? Colors.orange.shade100 : null,
         filled: modified,

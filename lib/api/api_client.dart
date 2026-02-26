@@ -17,6 +17,19 @@ class ApiClient {
     return list.map((e) => EntityDefinition.fromJson(e)).toList();
   }
 
+Future<EntityDefinition> getEntityMetadata(String entityName) async {
+  final url = Uri.parse('$baseUrl/metadata/entity/$entityName');
+  final response = await http.get(url);
+  //debugPrint("RAW DATA RESPONSE: ${response.body}");
+  if (response.statusCode != 200) {
+    throw Exception('Error al obtener metadata de entidad: ${response.body}');
+  }
+
+  final jsonData = jsonDecode(response.body);
+  return EntityDefinition.fromJson(jsonData);
+}
+
+
   Future<EntityDefinition> getEntity(String name) async {
     final res = await http.get(Uri.parse('$baseUrl/metadata/entities/$name'));
     if (res.statusCode != 200) {
@@ -26,8 +39,11 @@ class ApiClient {
   }
 
   Future<List<Map<String, dynamic>>> getData(String entity) async {
-    final res = await http.get(Uri.parse('$baseUrl/data/$entity'));
-    
+   final url = Uri.parse('$baseUrl/data/$entity');
+    final res = await http.get(url);
+
+    //debugPrint("RAW DATA RESPONSE: ${res.body}");
+
     if (res.statusCode != 200) {
       throw Exception('Error al obtener datos de $entity');
     }
@@ -59,6 +75,9 @@ class ApiClient {
         "filters": filters,
       }),
     );
+
+    debugPrint("RAW LIST RESPONSE: ${res.body}");
+
 
     if (res.statusCode != 200) {
       throw Exception('Error al obtener datos filtrados de $entity: ${res.body}');

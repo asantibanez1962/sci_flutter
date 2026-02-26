@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../api/api_client.dart';
 import '../../models/entity_definition.dart';
-import '../../models/field_definition.dart';
 import '../entities_screen.dart';
 import '../entity_data_screen.dart';
-//import '../../widgets/dynamic_form_view.dart';
 import '../../widgets/dynamic_form_view/dynamic_form_view.dart';
 import '../../models/tab_item.dart';
 import 'tab_icons.dart';
@@ -28,19 +26,19 @@ class TabManager extends StatefulWidget {
 
 class _TabManagerState extends State<TabManager>
     with TickerProviderStateMixin {
-
   late TabController controller;
   final List<TabItem> tabs = [];
-  final formKey = GlobalKey<DynamicFormViewState>();
 
   bool _restoring = false;
   bool _initialized = false;
 
   @override
   void initState() {
+    print("🔥🔥🔥 TABMANAGER INITSTATE EJECUTADO 🔥🔥🔥");
+
     super.initState();
 
-    // 1. Pestaña fija "Entidades"
+//    pestaña fija "Entidades"
     tabs.add(
       TabItem(
         id: "entities",
@@ -56,55 +54,30 @@ class _TabManagerState extends State<TabManager>
       ),
     );
 
-    // 2. Controller inicial con la pestaña fija
+    controller = TabController(length: tabs.length, vsync: this);
+  }
+
+  // helper central para recrear controller
+  void _rebuildController({int? targetIndex}) {
+    final oldIndex = controller.index;
+
+    controller.dispose();
     controller = TabController(length: tabs.length, vsync: this);
 
-    // 3. Esperar a que las entidades estén cargadas
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _waitForEntities();
-    });
-  }
-
-  // ----------------------------------------------------
-  // ESPERAR A QUE LAS ENTIDADES ESTÉN CARGADAS
-  // ----------------------------------------------------
-  Future<void> _waitForEntities() async {
-    if (_initialized) return;
-
-    // Esperar hasta que entities tenga datos reales
-    while (widget.entities.isEmpty) {
-      await Future.delayed(const Duration(milliseconds: 50));
+    if (targetIndex != null) {
+      controller.index = targetIndex.clamp(0, tabs.length - 1);
+    } else {
+      controller.index = oldIndex.clamp(0, tabs.length - 1);
     }
 
-    _initialized = true;
-    _initTabs();
+    setState(() {});
   }
 
-  // ----------------------------------------------------
-  // INICIALIZAR / RESTAURAR PESTAÑAS
-  // ----------------------------------------------------
-  Future<void> _initTabs() async {
-    _restoring = true;
-
-    final ids = await TabPersistence.loadTabIds();
-
-    for (final id in ids) {
-      await _restoreTabFromId(id);
-    }
-
-    _restoring = false;
-
-    _refreshController();
-    _saveTabs();
-  }
-
-  // ----------------------------------------------------
-  // RECONSTRUIR PESTAÑAS DESDE ID
-  // ----------------------------------------------------
+  
+/*
   Future<void> _restoreTabFromId(String id) async {
     if (id == "entities") return;
 
-    // LISTA
     if (id.startsWith("list_")) {
       final entityName = id.substring(5);
       final entity = widget.entities.firstWhere((e) => e.name == entityName);
@@ -112,7 +85,6 @@ class _TabManagerState extends State<TabManager>
       return;
     }
 
-    // CREAR
     if (id.startsWith("create_")) {
       final entityName = id.substring(7);
       final entity = widget.entities.firstWhere((e) => e.name == entityName);
@@ -120,7 +92,6 @@ class _TabManagerState extends State<TabManager>
       return;
     }
 
-    // EDITAR
     if (id.startsWith("edit_")) {
       final parts = id.split("_");
       if (parts.length < 3) return;
@@ -137,30 +108,17 @@ class _TabManagerState extends State<TabManager>
       return;
     }
   }
+*/
+  // ----------------- ABRIR PESTAÑAS -----------------
+void _openEntityTab(EntityDefinition entity, {bool save = true}) async {
+    final fullEntity = await widget.api.getEntityMetadata(entity.name);
+    entity.fields = fullEntity.fields;
 
-  // ----------------------------------------------------
-  // CONTROLADOR DE TABS
-  // ----------------------------------------------------
-  void _refreshController() {
-    controller.dispose();
-    controller = TabController(length: tabs.length, vsync: this);
-    setState(() {});
-  }
-
-  // ----------------------------------------------------
-  // ABRIR PESTAÑAS
-  // ----------------------------------------------------
-  void _openEntityTab(EntityDefinition entity, {bool save = true}) async{
-    // 1) Cargar metadata desde el backend
-  final columns = await widget.api.getColumns(entity.name);
-
-  entity.fields = columns.map((c) => FieldDefinition.fromJson(c)).toList();
-
-  // 2) Ahora sí abrir la pestaña
+    final listId = "list_${entity.name.toLowerCase().trim()}";
 
     tabs.add(
       TabItem(
-        id: "list_${entity.name}",
+        id: listId,
         title: entity.displayName,
         icon: tabIcon(TabType.list),
         color: tabColor(TabType.list),
@@ -174,188 +132,206 @@ class _TabManagerState extends State<TabManager>
       ),
     );
 
+if (!_restoring) {
+  _rebuildController();
+
+  // ⭐ CAMBIO DE PESTAÑA DESPUÉS DEL FRAME
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    controller.index = tabs.length - 1;
+    setState(() {});
+  });
+
+
+  if (save) _saveTabs();
+}
+
+
+  }
+
+    void _openEditTab(
+    EntityDefinition entity,
+    Map<String, dynamic> row, {
+    bool save = true,
+  }) {
+
+    final tabId = "edit_${entity.name}_${row[entity.primaryKey]}";
+    final previousTabIndex = controller.index;
+    final formKey = GlobalKey<DynamicFormViewState>();
+
+    tabs.add(
+      TabItem(
+        id: tabId,
+        title: "Editar ${entity.displayName}",
+        icon: tabIcon(TabType.edit),
+        color: tabColor(TabType.edit),
+        closable: true,
+        formKey: formKey,
+        view: DynamicFormView(
+          key: formKey,
+          api: widget.api,
+          entity: entity,
+          initialData: row,
+          onClose: () async {
+            final ok = await formKey.currentState?.attemptClose() ?? true;
+            if (!ok) return;
+            final editIndex = tabs.indexWhere((t) => t.id == tabId);
+            if (editIndex != -1) {
+              _closeTab(editIndex);
+            }
+            controller.index = previousTabIndex;
+            setState(() {});
+            }
+                 ),
+      ),
+    );
+
     if (!_restoring) {
-      _refreshController();
-      controller.animateTo(tabs.length - 1);
+      _rebuildController(targetIndex: tabs.length - 1);
+      if (save) _saveTabs();
+    }
+
+  }
+
+  void _openCreateTab(EntityDefinition entity, {bool save = true}) {
+    final tabId = "create_${entity.name}";
+
+    final previousTabIndex = controller.index;
+
+    final formKey = GlobalKey<DynamicFormViewState>();
+
+    tabs.add(
+      TabItem(
+        id: tabId,
+        title: "Nuevo ${entity.displayName}",
+        icon: tabIcon(TabType.create),
+        color: tabColor(TabType.create),
+        closable: true,
+        view: DynamicFormView(
+          api: widget.api,
+          entity: entity,
+          initialData: null,
+          key: formKey,
+          onClose: () async {
+            final ok = await formKey.currentState?.attemptClose() ?? true;
+            if (!ok) return;
+
+            final createIndex = tabs.indexWhere((t) => t.id == tabId);
+            if (createIndex != -1) {
+              _closeTab(createIndex);
+            }
+
+             controller.index = previousTabIndex;
+             setState(() {});
+          },
+        ),
+      ),
+    );
+
+    if (!_restoring) {
+      _rebuildController(targetIndex: tabs.length - 1);
       if (save) _saveTabs();
     }
   }
 
+  // ----------------- CERRAR PESTAÑAS -----------------
 
-void _openEditTab(
-  EntityDefinition entity,
-  Map<String, dynamic> row, {
-  bool save = true,
-}) {
-  final tabId = "edit_${entity.name}_${row[entity.primaryKey]}";
-
-  // 🔥 Guardamos el ID de la pestaña de lista (NO el índice)
-  final listTabId = tabs[controller.index].id;
-//para el control de mensaje de cambios antes de cerrar si no están grabados los cambios
-  final formKey = GlobalKey<DynamicFormViewState>();
-
-  tabs.add(
-    TabItem(
-      id: tabId,
-      title: "Editar ${entity.displayName}",
-      icon: tabIcon(TabType.edit),
-      color: tabColor(TabType.edit),
-      closable: true,
-      formKey: formKey,   // ⭐ AQUI
-      view: DynamicFormView(
-        key: formKey,     // ⭐ AQUI
-        api: widget.api,
-        entity: entity,
-        initialData: row,
-        onClose: () async{
-            // 1. Obtener el state del DynamicFormView
-             final ok = await formKey.currentState?.attemptClose() ?? true;
-            if (!ok) return; // ❌ Usuario canceló
-
-          // 2. Cerrar la pestaña actual
-          final editIndex = tabs.indexWhere((t) => t.id == tabId);
-          if (editIndex != -1) {
-            _closeTab(editIndex);
-          }
-
-          // 3. Buscar la pestaña de lista por ID
-          final listIndex = tabs.indexWhere((t) => t.id == listTabId);
-          if (listIndex != -1) {
-            controller.animateTo(listIndex);
-          }
-        },
-      ),
-    ),
-  );
-
-  if (!_restoring) {
-    _refreshController();
-    controller.animateTo(tabs.length - 1);
-    if (save) _saveTabs();
-  }
-}
-//openedit tab
-void _openCreateTab(EntityDefinition entity, {bool save = true}) {
-  final tabId = "create_${entity.name}";
-
-  // 🔥 Guardamos el ID de la pestaña de lista (NO el índice)
-  final listTabId = tabs[controller.index].id;
-//para el control de mensaje de cambios antes de cerrar si no están grabados los cambios
-  final formKey = GlobalKey<DynamicFormViewState>();
-
-  tabs.add(
-    TabItem(
-      id: tabId,
-      title: "Nuevo ${entity.displayName}",
-      icon: tabIcon(TabType.create),
-      color: tabColor(TabType.create),
-      closable: true,
-      view: DynamicFormView(
-        api: widget.api,
-        entity: entity,
-        initialData: null,
-        key: formKey,  
-        onClose: () async {
-            // 1. Obtener el state del DynamicFormView
-            final ok = await formKey.currentState?.attemptClose() ?? true;
-            if (!ok) return; // ❌ Usuario canceló
-
-          // 2. Cerrar la pestaña actual (la de creación)
-          final editIndex = tabs.indexWhere((t) => t.id == tabId);
-          if (editIndex != -1) {
-            _closeTab(editIndex);
-          }
-
-          // 3. Buscar la pestaña de lista por ID
-          final listIndex = tabs.indexWhere((t) => t.id == listTabId);
-          if (listIndex != -1) {
-            controller.animateTo(listIndex);
-          }
-        },
-      ),
-    ),
-  );
-
-  if (!_restoring) {
-    _refreshController();
-    controller.animateTo(tabs.length - 1);
-    if (save) _saveTabs();
-  }
-}
-//oncreate tab
-
-
-  // ----------------------------------------------------
-  // CERRAR PESTAÑAS
-  // ----------------------------------------------------
   void _closeTab(int index) {
-  if (index < 0 || index >= tabs.length) return; // ← seguridad extra
-  if (!tabs[index].closable) return;
 
-  tabs.removeAt(index);
+    if (index < 0 || index >= tabs.length) return;
+    if (!tabs[index].closable) return;
 
-  if (!_restoring) {
-    _refreshController();
-    _saveTabs();
+    final oldIndex = controller.index;
+
+    tabs.removeAt(index);
+
+    if (!_restoring) {
+      int targetIndex;
+      if (tabs.isEmpty) {
+        targetIndex = 0;
+      } else if (oldIndex >= tabs.length) {
+        targetIndex = tabs.length - 1;
+      } else {
+        targetIndex = oldIndex;
+      }
+
+      _rebuildController(targetIndex: targetIndex);
+      _saveTabs();
+    }
+
+ //   print("Tabs after close: ${tabs.map((t) => t.id).toList()}");
+ //   print("Controller index after close = ${controller.index}");
   }
-}
-  // ----------------------------------------------------
-  // GUARDAR PESTAÑAS
-  // ----------------------------------------------------
+
   void _saveTabs() {
     TabPersistence.saveTabs(tabs);
   }
 
-  // ----------------------------------------------------
-  // UI
-  // ----------------------------------------------------
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("ERP Dinámico"),
-        bottom: TabBar(
-          controller: controller,
-          isScrollable: true,
-          tabs: [
-            for (int i = 0; i < tabs.length; i++)
-              Tab(
-                child: Row(
-                  children: [
-                    Icon(tabs[i].icon, color: tabs[i].color),
-                    const SizedBox(width: 6),
-                    Text(tabs[i].title),
-                    if (tabs[i].closable)
-                      GestureDetector(
-                       onTap: () async {
-                      // Si la vista tiene un onClose, llamarlo
+
+
+@override
+Widget build(BuildContext context) {
+ // print("🔥 BUILD: controller.index = ${controller.index}");
+
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text("ERP Dinámico"),
+      bottom: TabBar(
+        controller: controller,
+        isScrollable: true,
+        tabs: [
+          for (int i = 0; i < tabs.length; i++)
+            Tab(
+              child: Row(
+                children: [
+                  Icon(tabs[i].icon, color: tabs[i].color),
+                  const SizedBox(width: 6),
+                  Text(tabs[i].title),
+                  if (tabs[i].closable)
+                    GestureDetector(
+                      onTap: () async {
                         final key = tabs[i].formKey;
                         if (key != null) {
-                              final ok = await key.currentState?.attemptClose() ?? true;
-                              if (!ok) return;
-                            }
-                          _closeTab(i);
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: Icon(Icons.close, size: 16),
-                        ),
+                          final ok = await key.currentState?.attemptClose() ?? true;
+                          if (!ok) return;
+                        }
+                        _closeTab(i);
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Icon(Icons.close, size: 16),
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
-          ],
-        ),
+            ),
+        ],
       ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        child: TabBarView(
-          controller: controller,
-          children: tabs.map((t) => t.view).toList(),
-        ),
-      ),
-    );
-  }
-  
+    ),
 
+    body: TabBarView(
+      controller: controller,
+      children: [
+        for (final t in tabs)
+          KeyedSubtree(
+            key: ValueKey(t.id),
+            child: t.view,
+          )
+      ],
+    ),
+  );
+}
+/*
+  Widget _buildTabContent() {
+  return TabBarView(
+    controller: controller,
+    children: [
+      for (final t in tabs)
+        KeyedSubtree(
+          key: ValueKey(t.id),
+          child: t.view,
+        )
+    ],
+  );
+}
+*/
 }

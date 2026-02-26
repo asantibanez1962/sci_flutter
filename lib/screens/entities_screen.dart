@@ -18,6 +18,7 @@ class EntitiesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    /*
     return Scaffold(
       appBar: AppBar(title: const Text("Entidades")),
       body: ListView.builder(
@@ -33,6 +34,24 @@ class EntitiesScreen extends StatelessWidget {
           );
         },
       ),
-    );
+    );*/
+    return ListView.builder(
+        itemCount: entities.length,
+        itemBuilder: (_, i) {
+          final entity = entities[i];
+
+          return ListTile(
+            title: Text(entity.displayName),
+            leading: const Icon(Icons.folder),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+           onTap: () {
+              //  print("🔥 CLICK DESDE ENTITIES");
+                onOpenEntity(entity);
+            },
+
+          );
+        },
+      );
+
   }
 }

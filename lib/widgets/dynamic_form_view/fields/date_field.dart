@@ -4,6 +4,7 @@ class DateFieldWidget extends StatelessWidget {
   final String label;
   final String? value;
   final bool modified;
+  final String? errorText;
   final ValueChanged<String> onChanged;
 
   const DateFieldWidget({
@@ -12,6 +13,7 @@ class DateFieldWidget extends StatelessWidget {
     required this.value,
     required this.modified,
     required this.onChanged,
+     this.errorText,
   });
 
   @override
@@ -32,6 +34,7 @@ class DateFieldWidget extends StatelessWidget {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
+          errorText: errorText,
           border: const OutlineInputBorder(),
           fillColor: modified ? Colors.orange.shade100 : null,
           filled: modified,

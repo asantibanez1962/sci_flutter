@@ -4,6 +4,7 @@ class TextFieldWidget extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final bool modified;
+   final String? errorText;
   final ValueChanged<String> onChanged;
 
   const TextFieldWidget({
@@ -12,6 +13,7 @@ class TextFieldWidget extends StatelessWidget {
     required this.controller,
     required this.modified,
     required this.onChanged,
+       this.errorText,
   });
 
   @override
@@ -20,6 +22,7 @@ class TextFieldWidget extends StatelessWidget {
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
+        errorText: errorText,
         border: const OutlineInputBorder(),
         fillColor: modified ? Colors.orange.shade100 : null,
         filled: modified,
