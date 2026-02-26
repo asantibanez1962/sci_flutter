@@ -13,6 +13,7 @@ import '../../widgets/column_visibility_dialog.dart';
 class DynamicListController {
   final dynamic state;
 
+
   DynamicListController(this.state);
 
   bool _disposed = false;
@@ -32,7 +33,9 @@ class DynamicListController {
   String? sortColumn;
   bool sortAscending = true;
   bool tableVisible = true;
-
+  String? hoveredHeader;
+  int? hoveredRow;
+  
   late ColumnVisibilityApi columnApi;
 
   Future<void> init() async {

@@ -17,76 +17,122 @@ class DynamicListContextMenu {
         position.dy,
       ),
       items: [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: "asc",
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
-            children: [
+            children: const [
               Icon(Icons.arrow_upward, size: 16),
               SizedBox(width: 6),
-              Text("Ordenar ascendente"),
+              Text("Ordenar ascendente", style: TextStyle(fontSize: 13)),
             ],
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: "desc",
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
-            children: [
+            children: const [
               Icon(Icons.arrow_downward, size: 16),
               SizedBox(width: 6),
-              Text("Ordenar descendente"),
+              Text("Ordenar descendente", style: TextStyle(fontSize: 13)),
             ],
           ),
         ),
+
         const PopupMenuDivider(),
-        const PopupMenuItem(
+
+        PopupMenuItem(
           value: "filter",
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
-            children: [
+            children: const [
               Icon(Icons.filter_alt, size: 16),
               SizedBox(width: 6),
-              Text("Filtrar…"),
+              Text("Filtrar…", style: TextStyle(fontSize: 13)),
             ],
           ),
         ),
+
         if (hasFilter)
-          const PopupMenuItem(
+          PopupMenuItem(
             value: "clear",
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
-              children: [
+              children: const [
                 Icon(Icons.filter_alt_off, size: 16),
                 SizedBox(width: 6),
-                Text("Quitar filtro"),
+                Text("Quitar filtro", style: TextStyle(fontSize: 13)),
               ],
             ),
           ),
+
         const PopupMenuDivider(),
+
         const PopupMenuItem(
           value: "empty",
-          child: Text("Vacío"),
+          height: 28,
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: Text("Vacío", style: TextStyle(fontSize: 13)),
         ),
         const PopupMenuItem(
           value: "notEmpty",
-          child: Text("No vacío"),
+          height: 28,
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: Text("No vacío", style: TextStyle(fontSize: 13)),
         ),
         const PopupMenuItem(
           value: "equals",
-          child: Text("Igual a…"),
+          height: 28,
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: Text("Igual a…", style: TextStyle(fontSize: 13)),
         ),
         const PopupMenuItem(
           value: "notEquals",
-          child: Text("Distinto de…"),
+          height: 28,
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: Text("Distinto de…", style: TextStyle(fontSize: 13)),
         ),
+
         const PopupMenuDivider(),
+
         const PopupMenuItem(
           value: "hideColumn",
-          child: Text("Ocultar columna"),
+          height: 28,
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: Text("Ocultar columna", style: TextStyle(fontSize: 13)),
         ),
+
         if (isDate) ...[
           const PopupMenuDivider(),
-          const PopupMenuItem(value: "today", child: Text("Hoy")),
-          const PopupMenuItem(value: "yesterday", child: Text("Ayer")),
-          const PopupMenuItem(value: "thisWeek", child: Text("Esta semana")),
-          const PopupMenuItem(value: "thisMonth", child: Text("Este mes")),
+          const PopupMenuItem(
+            value: "today",
+            height: 28,
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text("Hoy", style: TextStyle(fontSize: 13)),
+          ),
+          const PopupMenuItem(
+            value: "yesterday",
+            height: 28,
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text("Ayer", style: TextStyle(fontSize: 13)),
+          ),
+          const PopupMenuItem(
+            value: "thisWeek",
+            height: 28,
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text("Esta semana", style: TextStyle(fontSize: 13)),
+          ),
+          const PopupMenuItem(
+            value: "thisMonth",
+            height: 28,
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text("Este mes", style: TextStyle(fontSize: 13)),
+          ),
         ],
       ],
     );

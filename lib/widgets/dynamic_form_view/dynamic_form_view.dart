@@ -39,9 +39,6 @@ class DynamicFormViewState extends State<DynamicFormView> {
   @override
   void initState() {
     super.initState();
-   // debugPrint(">>> DynamicFormView MODULAR ejecutándose para ${widget.entity.name}");
-
-
     controller = DynamicFormController(
       api: widget.api,
       entity: widget.entity,
@@ -64,6 +61,13 @@ class DynamicFormViewState extends State<DynamicFormView> {
       },
       child: Scaffold(
         appBar: AppBar(
+        toolbarHeight: 42,
+          titleTextStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+          iconTheme: const IconThemeData(size: 18, color: Colors.black87),
           title: Text(widget.entity.displayName),
         ),
         body: _buildBody(),
@@ -73,7 +77,7 @@ class DynamicFormViewState extends State<DynamicFormView> {
 
   Widget _buildBody() {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         children: [
           if (controller.hasUnsavedChanges) const UnsavedChangesBanner(),
@@ -82,14 +86,20 @@ class DynamicFormViewState extends State<DynamicFormView> {
               children: [
                 ...widget.entity.fields.map(
                   (field) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.only(bottom: 10),
                     child: _buildField(field),
                   ),
                 ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: hasValidationErrors ? null : _save,
-                  child: const Text("Guardar"),
+                const SizedBox(height: 16),
+               SizedBox(
+                  height: 36,
+                  child: ElevatedButton(
+                    onPressed: hasValidationErrors ? null : _save,
+                    child: const Text(
+                      "Guardar",
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
                 ),
               ],
             ),

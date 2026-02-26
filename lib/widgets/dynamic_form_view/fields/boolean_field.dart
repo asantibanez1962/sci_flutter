@@ -17,29 +17,35 @@ class BooleanField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), // ⭐ Compacto
       decoration: BoxDecoration(
         color: modified ? Colors.orange.shade100 : null,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(
           color: modified ? Colors.orange : Colors.grey.shade400,
         ),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: modified ? Colors.orange.shade900 : Colors.black87,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13, // ⭐ Compacto
+                fontWeight: FontWeight.w500,
+                color: modified ? Colors.orange.shade900 : Colors.black87,
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          Switch(
-            value: value,
-            onChanged: onChanged,
+
+          // ⭐ Switch compacto
+          Transform.scale(
+            scale: 0.75, // reduce tamaño del switch
+            child: Switch(
+              value: value,
+              onChanged: onChanged,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
           ),
         ],
       ),

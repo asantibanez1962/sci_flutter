@@ -15,6 +15,7 @@ class DynamicListTable extends StatelessWidget {
     required this.onEdit,
   });
 
+
   @override
   Widget build(BuildContext context) {
     if (controller.rows.isEmpty) {
@@ -27,11 +28,18 @@ class DynamicListTable extends StatelessWidget {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
+          dataRowMinHeight: 32,
+          dataRowMaxHeight: 36,
+          headingRowHeight: 38,
+          columnSpacing: 12,
+          horizontalMargin: 8,
+
           sortColumnIndex: controller.sortColumn != null
               ? controller.columns.indexWhere(
                   (c) => c.field == controller.sortColumn)
               : null,
           sortAscending: controller.sortAscending,
+
           columns: controller.columns
               .where((c) => c.visible)
               .map((col) {
@@ -39,68 +47,113 @@ class DynamicListTable extends StatelessWidget {
             final hasFilter = controller.columnFilters.containsKey(field);
 
             return DataColumn(
-              label: GestureDetector(
-                onSecondaryTapDown: (details) async {
-                  final selected = await DynamicListContextMenu.show(
-                    context: context,
-                    position: details.globalPosition,
-                    column: field,
-                    hasFilter: hasFilter,
-                    isDate: controller.inferType(field) == "date",
-                  );
-
-                  if (selected != null) {
-                    await DynamicListContextActions.handle(
-                      selected: selected,
-                      column: field,
-                      controller: controller,
+              label: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                onEnter: (_) => controller.state.setState(() {
+                  controller.hoveredHeader = field;
+                }),
+                onExit: (_) => controller.state.setState(() {
+                  controller.hoveredHeader = null;
+                }),
+                child: GestureDetector(
+                  onSecondaryTapDown: (details) async {
+                    final selected = await DynamicListContextMenu.show(
                       context: context,
+                      position: details.globalPosition,
+                      column: field,
+                      hasFilter: hasFilter,
+                      isDate: controller.inferType(field) == "date",
                     );
-                  }
-                },
-                child: Row(
-                  children: [
-                    Text(
-                      col.label,
-                      style: TextStyle(
-                        fontWeight:
-                            hasFilter ? FontWeight.bold : FontWeight.normal,
-                        color: hasFilter ? Colors.blue : Colors.black,
-                      ),
+
+                    if (selected != null) {
+                      await DynamicListContextActions.handle(
+                        selected: selected,
+                        column: field,
+                        controller: controller,
+                        context: context,
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 2, horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: controller.hoveredHeader == field
+                          ? Colors.blue.withValues(alpha: 0.06)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(3),
                     ),
-                    if (controller.sortColumn == field)
-                      Icon(
-                        controller.sortAscending
-                            ? Icons.arrow_upward
-                            : Icons.arrow_downward,
-                        size: 16,
-                      ),
-                  ],
+                    child: Row(
+                      children: [
+                        Text(
+                          col.label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: hasFilter
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: controller.hoveredHeader == field
+                                ? Colors.blue
+                                : (hasFilter ? Colors.blue : Colors.black),
+                          ),
+                        ),
+
+                        if (controller.sortColumn == field)
+                          Icon(
+                            controller.sortAscending
+                                ? Icons.arrow_drop_up
+                                : Icons.arrow_drop_down,
+                            size: 18,
+                            color: Colors.blue,
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             );
           }).toList(),
-          rows: controller.rows.map((row) {
+
+          rows: controller.rows.asMap().entries.map((entry) {
+            final index = entry.key;
+            final row = entry.value;
+
+            final isHovered = controller.hoveredRow == index;
+
             return DataRow(
+              color: WidgetStateProperty.resolveWith((states) {
+                return isHovered
+                    ? Colors.blue.withValues(alpha: 0.08)
+                    : null;
+              }),
               cells: controller.columns
                   .where((c) => c.visible)
                   .map((col) {
                 final value = row[col.field];
 
-                // ⭐ Lookup dinámico
-                if (controller.lookupMaps.containsKey(col.field)) {
-                  final map = controller.lookupMaps[col.field]!;
-                  final label = map[value] ?? value.toString();
-
-                  return DataCell(
-                    Text(label),
-                    onTap: () => onEdit(Map<String, dynamic>.from(row)),
-                  );
-                }
-
-                // ⭐ Valor normal
                 return DataCell(
-                  buildCellValue(value),
+                  MouseRegion(
+                    onEnter: (_) => controller.state.setState(() {
+                      controller.hoveredRow = index;
+                    }),
+                    onExit: (_) => controller.state.setState(() {
+                      controller.hoveredRow = null;
+                    }),
+                    child: DefaultTextStyle(
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isHovered ? Colors.blue : Colors.black,
+                        fontWeight:
+                            isHovered ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                      child: controller.lookupMaps.containsKey(col.field)
+                          ? Text(
+                              controller.lookupMaps[col.field]![value] ??
+                                  value.toString(),
+                            )
+                          : buildCellValue(value),
+                    ),
+                  ),
                   onTap: () => onEdit(Map<String, dynamic>.from(row)),
                 );
               }).toList(),

@@ -97,9 +97,9 @@ Future<Map<String, dynamic>> saveData(
       ? '$baseUrl/data/$entity'
       : '$baseUrl/data/$entity/$id';
 
-  debugPrint("➡️ saveData() INICIO");
-  debugPrint("URL: $url");
-  debugPrint("DATA: ${jsonEncode(data)}");
+  //debugPrint("➡️ saveData() INICIO");
+  //debugPrint("URL: $url");
+  //debugPrint("DATA: ${jsonEncode(data)}");
 
   final response = await (id == null
       ? http.post(
@@ -113,8 +113,8 @@ Future<Map<String, dynamic>> saveData(
           body: jsonEncode(data),
         ));
 
-  debugPrint("⬅️ saveData() RESPONSE STATUS: ${response.statusCode}");
-  debugPrint("⬅️ saveData() RESPONSE BODY RAW: '${response.body}'");
+  //debugPrint("⬅️ saveData() RESPONSE STATUS: ${response.statusCode}");
+  //debugPrint("⬅️ saveData() RESPONSE BODY RAW: '${response.body}'");
 
   if (response.statusCode != 200) {
     throw Exception('Error al guardar datos: ${response.body}');
@@ -129,7 +129,7 @@ Future<Map<String, dynamic>> saveData(
   try {
     final decoded = jsonDecode(response.body);
 
-    debugPrint("📦 saveData() JSON DECODED: $decoded");
+    //debugPrint("📦 saveData() JSON DECODED: $decoded");
 
     if (decoded is Map<String, dynamic>) {
       return decoded;
@@ -138,7 +138,7 @@ Future<Map<String, dynamic>> saveData(
     // Si devuelve un número, string, etc.
     return {"success": true, "data": decoded};
   } catch (e) {
-    debugPrint("⚠️ JSON DECODE FALLÓ: $e");
+    //debugPrint("⚠️ JSON DECODE FALLÓ: $e");
     return {"success": true};
   }
 }//savedata
@@ -187,7 +187,7 @@ Future<List<Map<String, dynamic>>> getLookupRows(
   final url = Uri.parse("$baseUrl/lookup/$entity");
 
   final body = jsonEncode({"fields": displayFields});
-  debugPrint(">>> SENDING BODY = $body");
+  //debugPrint(">>> SENDING BODY = $body");
 
   final res = await http.post(
     url,
@@ -195,12 +195,12 @@ Future<List<Map<String, dynamic>>> getLookupRows(
     body: body,
   );
 
-  debugPrint(">>> STATUS = ${res.statusCode}");
-  debugPrint(">>> RAW BODY LENGTH = ${res.body.length}");
-  debugPrint(">>> RAW BODY = '${res.body}'"); // notar comillas
+//  debugPrint(">>> STATUS = ${res.statusCode}");
+//  debugPrint(">>> RAW BODY LENGTH = ${res.body.length}");
+//  debugPrint(">>> RAW BODY = '${res.body}'"); // notar comillas
 
   if (res.statusCode != 200) {
-    debugPrint(">>> ERROR RESPONSE");
+  //  debugPrint(">>> ERROR RESPONSE");
     return [];
   }
 

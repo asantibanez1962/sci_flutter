@@ -13,7 +13,7 @@ class DateFieldWidget extends StatelessWidget {
     required this.value,
     required this.modified,
     required this.onChanged,
-     this.errorText,
+    this.errorText,
   });
 
   @override
@@ -33,19 +33,35 @@ class DateFieldWidget extends StatelessWidget {
       },
       child: InputDecorator(
         decoration: InputDecoration(
+          isDense: true, // ⭐ Aquí sí es válido
           labelText: label,
+          labelStyle: const TextStyle(fontSize: 13),
           errorText: errorText,
-          border: const OutlineInputBorder(),
+          errorStyle: const TextStyle(fontSize: 11),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 8,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(4),
+          ),
           fillColor: modified ? Colors.orange.shade100 : null,
           filled: modified,
           prefixIcon: modified
-              ? const Icon(Icons.warning_amber, color: Colors.orange)
+              ? const Icon(
+                  Icons.warning_amber,
+                  color: Colors.orange,
+                  size: 18,
+                )
               : null,
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 32,
+            minHeight: 32,
+          ),
         ),
         child: Text(
-          value != null
-              ? value!.substring(0, 10)
-              : "Seleccione una fecha",
+          value != null ? value!.substring(0, 10) : "Seleccione una fecha",
+          style: const TextStyle(fontSize: 13),
         ),
       ),
     );

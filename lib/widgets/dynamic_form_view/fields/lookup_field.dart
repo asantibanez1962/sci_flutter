@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../models/field_definition.dart';
-import '../../../widgets/lookup_autoocomplete.dart';
+import '../../lookup_autocomplete.dart';
 import '../../../widgets/lookupdialog.dart';
 
 typedef LookupMap = Map<int, String>;
@@ -15,7 +15,7 @@ class LookupFieldBuilder {
     required void Function(dynamic) onChanged,
     required Future<List<Map<String, dynamic>>> Function() loadDialogRows,
   }) {
-    // lookup complejo con diálogo
+    // ⭐ Lookup con diálogo (compacto)
     if (field.dataType == "lookup" && field.lookupDisplayFields != null) {
       return Row(
         children: [
@@ -25,18 +25,31 @@ class LookupFieldBuilder {
                 text: lookupMap[value] ?? "",
               ),
               readOnly: true,
+              style: const TextStyle(fontSize: 13),
               decoration: InputDecoration(
+                isDense: true,
                 labelText: field.label,
-                border: const OutlineInputBorder(),
-                enabledBorder: const OutlineInputBorder(),
-                disabledBorder: const OutlineInputBorder(),
+                labelStyle: const TextStyle(fontSize: 13),
+                errorStyle: const TextStyle(fontSize: 11),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 8,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
                 fillColor: isModified ? Colors.orange.shade100 : null,
                 filled: isModified,
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search, size: 18),
+            padding: const EdgeInsets.all(6),
+            constraints: const BoxConstraints(
+              minWidth: 32,
+              minHeight: 32,
+            ),
             onPressed: () async {
               final rows = await loadDialogRows();
 
@@ -58,7 +71,7 @@ class LookupFieldBuilder {
       );
     }
 
-    // lookup autocomplete
+    // ⭐ Lookup autocomplete (compacto)
     if (field.dataType == "lookup" && field.isAutocomplete) {
       return LookupAutocomplete(
         label: field.label,
@@ -66,16 +79,28 @@ class LookupFieldBuilder {
         value: value as int?,
         isModified: isModified,
         onChanged: (v) => onChanged(v),
+        fontSize: 13,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       );
     }
 
-    // lookup normal (dropdown)
+    // ⭐ Lookup dropdown (compacto)
     if (field.dataType == "lookup") {
       return DropdownButtonFormField<int>(
         initialValue: value as int?,
+        style: const TextStyle(fontSize: 13),
         decoration: InputDecoration(
+          isDense: true,
           labelText: field.label,
-          border: const OutlineInputBorder(),
+          labelStyle: const TextStyle(fontSize: 13),
+          errorStyle: const TextStyle(fontSize: 11),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 8,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(4),
+          ),
           fillColor: isModified ? Colors.orange.shade100 : null,
           filled: isModified,
         ),
@@ -83,7 +108,10 @@ class LookupFieldBuilder {
             .map(
               (e) => DropdownMenuItem(
                 value: e.key,
-                child: Text(e.value),
+                child: Text(
+                  e.value,
+                  style: const TextStyle(fontSize: 13),
+                ),
               ),
             )
             .toList(),

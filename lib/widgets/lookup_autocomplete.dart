@@ -5,8 +5,11 @@ class LookupAutocomplete extends StatefulWidget {
   final Map<int, String> lookupMap;
   final int? value;
   final Function(int?) onChanged;
- final bool isModified;
+  final bool isModified;
 
+  // ⭐ Parámetros para densidad visual
+  final double fontSize;
+  final EdgeInsets padding;
 
   const LookupAutocomplete({
     super.key,
@@ -14,8 +17,9 @@ class LookupAutocomplete extends StatefulWidget {
     required this.lookupMap,
     required this.value,
     required this.onChanged,
-    this.isModified = false, // ⭐ default
-
+    this.isModified = false,
+    this.fontSize = 13,
+    this.padding = const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
   });
 
   @override
@@ -32,58 +36,53 @@ class _LookupAutocompleteState extends State<LookupAutocomplete> {
     return Autocomplete<MapEntry<int, String>>(
       displayStringForOption: (opt) => opt.value,
 
-      // ⭐ Mostrar el valor actual en el campo
       initialValue: widget.value != null
           ? TextEditingValue(text: widget.lookupMap[widget.value] ?? "")
           : const TextEditingValue(),
 
-      // ⭐ Lógica de filtrado ERP-style
       optionsBuilder: (text) {
-        // Si el usuario NO está escribiendo → mostrar TODAS las opciones
-        if (!userIsTyping) {
-          return items;
-        }
-
-        // Si está escribiendo → filtrar
-        return items.where((e) =>
-            e.value.toLowerCase().contains(text.text.toLowerCase()));
+        if (!userIsTyping) return items;
+        return items.where(
+          (e) => e.value.toLowerCase().contains(text.text.toLowerCase()),
+        );
       },
 
       onSelected: (opt) {
         widget.onChanged(opt.key);
-        userIsTyping = false; // reset
+        userIsTyping = false;
       },
 
-      fieldViewBuilder: (context, textcontroller, focusNode, onFieldSubmitted) {
+      fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
         return TextFormField(
-          controller: textcontroller,
+          controller: textController,
           focusNode: focusNode,
+          style: TextStyle(fontSize: widget.fontSize),
+
           decoration: InputDecoration(
-                labelText: widget.label,
-                border: const OutlineInputBorder(),
-                enabledBorder: const OutlineInputBorder(),
-                focusedBorder: const OutlineInputBorder(),
+            isDense: true,
+            labelText: widget.label,
+            labelStyle: TextStyle(fontSize: widget.fontSize),
+            contentPadding: widget.padding,
+            errorStyle: const TextStyle(fontSize: 11),
 
-                // ⭐ Color dinámico según cambios
-                fillColor: widget.isModified ? Colors.orange.shade100 : null,
-                filled: widget.isModified,
-              ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
 
-          // ⭐ Permitir escribir para filtrar
+            fillColor: widget.isModified ? Colors.orange.shade100 : null,
+            filled: widget.isModified,
+          ),
+
           readOnly: false,
 
           onTap: () {
-            // ⭐ Al hacer tap → mostrar TODAS las opciones
             setState(() => userIsTyping = false);
             focusNode.requestFocus();
           },
 
           onChanged: (_) {
-            // ⭐ Si escribe → activar filtrado
             setState(() => userIsTyping = true);
           },
-
-          //decoration: InputDecoration(labelText: widget.label),
         );
       },
     );

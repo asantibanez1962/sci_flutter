@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import '../../../models/field_definition.dart';
 
 class FieldValidator {

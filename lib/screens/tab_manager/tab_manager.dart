@@ -30,12 +30,9 @@ class _TabManagerState extends State<TabManager>
   final List<TabItem> tabs = [];
 
   bool _restoring = false;
-  bool _initialized = false;
 
   @override
   void initState() {
-    print("🔥🔥🔥 TABMANAGER INITSTATE EJECUTADO 🔥🔥🔥");
-
     super.initState();
 
 //    pestaña fija "Entidades"
@@ -270,7 +267,6 @@ if (!_restoring) {
 
 @override
 Widget build(BuildContext context) {
- // print("🔥 BUILD: controller.index = ${controller.index}");
 
   return Scaffold(
     appBar: AppBar(

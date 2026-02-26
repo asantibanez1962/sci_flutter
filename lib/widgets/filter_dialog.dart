@@ -25,6 +25,7 @@ class _FilterDialogState extends State<FilterDialog> {
   late List<FilterOperator> operators;
 
   String logic = "AND";
+  final FocusNode _firstFocus = FocusNode();
 
   @override
   void initState() {
@@ -68,6 +69,11 @@ class _FilterDialogState extends State<FilterDialog> {
     controllers = conditions
         .map((c) => TextEditingController(text: c.value?.toString() ?? ""))
         .toList();
+
+    // ⭐ Foco automático en el primer campo
+    Future.delayed(Duration.zero, () {
+      if (_firstFocus.canRequestFocus) _firstFocus.requestFocus();
+    });
   }
 
   @override
@@ -75,14 +81,15 @@ class _FilterDialogState extends State<FilterDialog> {
     return AlertDialog(
       title: Text(
         "Filtros para ${widget.field}",
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       ),
+
       content: SizedBox(
-        width: 380,
+        width: 420,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // AND / OR
+            // ⭐ AND / OR compacto
             Row(
               children: [
                 const Text("Combinar:", style: TextStyle(fontSize: 13)),
@@ -93,11 +100,13 @@ class _FilterDialogState extends State<FilterDialog> {
                   style: const TextStyle(fontSize: 13),
                   items: const [
                     DropdownMenuItem(
-                        value: "AND",
-                        child: Text("AND (todas)", style: TextStyle(fontSize: 13))),
+                      value: "AND",
+                      child: Text("AND (todas)", style: TextStyle(fontSize: 13)),
+                    ),
                     DropdownMenuItem(
-                        value: "OR",
-                        child: Text("OR (cualquiera)", style: TextStyle(fontSize: 13))),
+                      value: "OR",
+                      child: Text("OR (cualquiera)", style: TextStyle(fontSize: 13)),
+                    ),
                   ],
                   onChanged: (v) => setState(() => logic = v!),
                 ),
@@ -106,12 +115,13 @@ class _FilterDialogState extends State<FilterDialog> {
 
             const SizedBox(height: 8),
 
-            // Condiciones
+            // ⭐ Condiciones
             for (int i = 0; i < conditions.length; i++)
               _buildConditionRow(i),
 
             const SizedBox(height: 8),
 
+            // ⭐ Botón agregar condición compacto
             TextButton.icon(
               icon: const Icon(Icons.add, size: 16),
               label: const Text("Agregar condición", style: TextStyle(fontSize: 13)),
@@ -130,6 +140,7 @@ class _FilterDialogState extends State<FilterDialog> {
           ],
         ),
       ),
+
       actionsPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       actions: [
         TextButton(
@@ -161,7 +172,7 @@ class _FilterDialogState extends State<FilterDialog> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          // Operador
+          // ⭐ Operador compacto
           Expanded(
             flex: 2,
             child: DropdownButton<String>(
@@ -181,16 +192,18 @@ class _FilterDialogState extends State<FilterDialog> {
 
           const SizedBox(width: 6),
 
-          // Valor
+          // ⭐ Valor compacto
           Expanded(
             flex: 3,
             child: TextField(
               controller: controller,
+              focusNode: index == 0 ? _firstFocus : null,
               style: const TextStyle(fontSize: 13),
               decoration: const InputDecoration(
                 hintText: "Valor",
                 isDense: true,
                 contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                border: OutlineInputBorder(),
               ),
               onChanged: (v) => cond.value = v,
             ),
@@ -198,7 +211,7 @@ class _FilterDialogState extends State<FilterDialog> {
 
           const SizedBox(width: 6),
 
-          // Eliminar
+          // ⭐ Eliminar compacto
           IconButton(
             icon: const Icon(Icons.delete, size: 18),
             padding: EdgeInsets.zero,
