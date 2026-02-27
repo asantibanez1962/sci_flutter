@@ -80,6 +80,7 @@ class DynamicListController {
           field: f.name,
           label: f.label,
           visible: true,
+          fieldType: f.fieldType,
         );
       }).toList();
 
@@ -269,5 +270,27 @@ Future<void> applyFilter(ColumnFilter filter) async {
     }
   }
 
-  String inferType(String field) => inferTypeFromRows(field, rows);
-}
+  //String inferType(String field) => inferTypeFromRows(field, rows);
+String inferType(String fieldName) {
+  final col = columns.firstWhere(
+    (c) => c.field == fieldName,
+  );
+
+  final t = col.fieldType.toLowerCase();
+
+  // Fechas siempre vienen bien desde metadata
+  if (t == "date" || t == "datetime") return "date";
+
+  // Booleanos también
+  if (t == "bool" || t == "boolean") return "bool";
+
+  // Lookup
+  if (t == "lookup") return "lookup";
+
+  // Para números, metadata NO sirve → inferir desde datos
+  final inferred = inferTypeFromRows(fieldName, rows);
+  debugPrint("inferered $inferred");
+  if (inferred == "number") return "number";
+
+  return "string";
+}}

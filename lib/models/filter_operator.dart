@@ -26,9 +26,12 @@ class FilterOperators {
   ];
 
   static const date = [
+    FilterOperator("=", "="),
     FilterOperator("Antes de", "before"),
     FilterOperator("Después de", "after"),
     FilterOperator("Entre", "between"),
+    FilterOperator("Vacías", "empty"),
+    FilterOperator("No vacías", "not empty"),
   ];
 
   static List<FilterOperator> boolean = [

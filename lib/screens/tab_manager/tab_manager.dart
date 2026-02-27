@@ -9,6 +9,7 @@ import 'tab_icons.dart';
 import 'tab_type.dart';
 import 'tab_colors.dart';
 import '../../services/tab_persistence.dart';
+import 'tab_view_wrapper.dart';
 
 class TabManager extends StatefulWidget {
   final ApiClient api;
@@ -163,25 +164,26 @@ if (!_restoring) {
         color: tabColor(TabType.edit),
         closable: true,
         formKey: formKey,
-        view: DynamicFormView(
-          key: formKey,
-          api: widget.api,
-          entity: entity,
-          initialData: row,
-          onClose: () async {
-            final ok = await formKey.currentState?.attemptClose() ?? true;
-            if (!ok) return;
-            final editIndex = tabs.indexWhere((t) => t.id == tabId);
-            if (editIndex != -1) {
-              _closeTab(editIndex);
-            }
-            controller.index = previousTabIndex;
-            setState(() {});
-            }
-                 ),
-      ),
+        view: TabViewWrapper( 
+          child:DynamicFormView(
+              key: formKey,
+              api: widget.api,
+              entity: entity,
+              initialData: row,
+              onClose: () async {
+                final ok = await formKey.currentState?.attemptClose() ?? true;
+                if (!ok) return;
+                final editIndex = tabs.indexWhere((t) => t.id == tabId);
+                if (editIndex != -1) {
+                  _closeTab(editIndex);
+                }
+                controller.index = previousTabIndex;
+                setState(() {});
+                }
+             ),
+            ),
+          ),
     );
-
     if (!_restoring) {
       _rebuildController(targetIndex: tabs.length - 1);
       if (save) _saveTabs();

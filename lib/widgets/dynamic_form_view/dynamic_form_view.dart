@@ -195,7 +195,7 @@ if (field.fieldType == "date") {
     value: value,
     modified: modified,
     onChanged: (v) {
-      setState(() => controller.formData[name] = v);
+      setState(() => controller.formData[name] = convertDMYtoISO(v));
     },
   );
 }
@@ -216,6 +216,7 @@ if (field.fieldType == "autocomplete") {
   }
 
   Future<void> _save() async {
+    debugPrint("FORM DATA: ${controller.formData}");
     await controller.save();
     await widget.onClose();
   }
@@ -279,4 +280,26 @@ Future<bool> attemptClose() async {
   // 3. Si hay cambios → pedir confirmación
   return await _confirmExit();
  }
+
+ String? convertDMYtoISO(String? dmy) {
+  if (dmy == null || dmy.isEmpty) return null;
+
+  // Si ya es ISO, no tocarlo
+  if (dmy.contains("T") && dmy.contains("-")) return dmy;
+
+  try {
+    final parts = dmy.split('/');
+    if (parts.length != 3) return dmy;
+
+    final day = int.parse(parts[0]);
+    final month = int.parse(parts[1]);
+    final year = int.parse(parts[2]);
+
+    final date = DateTime(year, month, day);
+    return date.toIso8601String();
+  } catch (_) {
+    return dmy;
+  }
+}
+
 }

@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'api/api_client.dart';
 import 'models/entity_definition.dart';
 import 'screens/tab_manager/tab_manager.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-void main() {
+  // ⭐ Necesario para DateFormat con locale
+  await initializeDateFormatting('es_CR', null);
+
   runApp(const MyApp());
 }
+
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -36,6 +43,17 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+        locale: const Locale('es', 'CR'),
+  supportedLocales: const [
+    Locale('es', 'CR'),
+    Locale('en', 'US'),
+  ],
+  localizationsDelegates: const [
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
+
       title: 'ERP Dinámico',
       theme: ThemeData(
         useMaterial3: true,

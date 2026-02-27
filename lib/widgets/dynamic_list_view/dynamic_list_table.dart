@@ -23,11 +23,16 @@ class DynamicListTable extends StatelessWidget {
     }
 
     return AnimatedOpacity(
+      
       opacity: controller.tableVisible ? 1.0 : 0.0,
       duration: const Duration(milliseconds: 250),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: DataTable(
+          child: Builder(builder: (_) {
+             debugPrint("DynamicListTable.build() ejecutado. Columnas visibles: "
+            "${controller.columns.where((c) => c.visible).length}");
+        //child:
+         return DataTable(
           dataRowMinHeight: 32,
           dataRowMaxHeight: 36,
           headingRowHeight: 38,
@@ -45,8 +50,12 @@ class DynamicListTable extends StatelessWidget {
               .map((col) {
             final field = col.field;
             final hasFilter = controller.columnFilters.containsKey(field);
+          //  debugPrint("inferType($field) = ${controller.inferType(field)}");
+          //  debugPrint("COL DEBUG => ${col.runtimeType} :: $col");
+          //  debugPrint("COLUMN FULL DEBUG => $col");
 
             return DataColumn(
+             //  key: ValueKey(field), // ⭐ fuerza reconstrucción
               label: MouseRegion(
                 cursor: SystemMouseCursors.click,
                 onEnter: (_) => controller.state.setState(() {
@@ -161,7 +170,8 @@ class DynamicListTable extends StatelessWidget {
               }).toList(),
             );
           }).toList(),
-        ),
+        );
+    }  )
       ),
     );
   }

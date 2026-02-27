@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
 import '../filters/column_filter.dart';
 import '../models/filter_condition.dart';
 import '../models/filter_operator.dart';
@@ -27,6 +29,8 @@ class _FilterDialogState extends State<FilterDialog> {
 
   String logic = "AND";
   final FocusNode _firstFocus = FocusNode();
+
+  final dateFormat = DateFormat('dd/MM/yyyy', 'es_CR');
 
   @override
   void initState() {
@@ -68,18 +72,51 @@ class _FilterDialogState extends State<FilterDialog> {
     }
 
     controllers = conditions
-        .map((c) => TextEditingController(text: c.value?.toString() ?? ""))
+        .map((c) => TextEditingController(text: _displayValue(c.value)))
         .toList();
 
     value2Controllers = conditions
         .map((c) => c.value2 != null
-            ? TextEditingController(text: c.value2.toString())
+            ? TextEditingController(text: _displayValue(c.value2))
             : null)
         .toList();
+
+    // Normalizar operadores inválidos
+    final validValues = operators.map((o) => o.value).toSet();
+    for (final c in conditions) {
+      if (!validValues.contains(c.operator)) {
+        c.operator = operators.first.value;
+      }
+    }
 
     Future.delayed(Duration.zero, () {
       if (_firstFocus.canRequestFocus) _firstFocus.requestFocus();
     });
+  }
+
+  // Convierte ISO → dd/MM/yyyy para mostrar
+  String _displayValue(String? raw) {
+    if (raw == null || raw.isEmpty) return "";
+    if (widget.fieldType != "date") return raw;
+
+    try {
+      final dt = DateTime.tryParse(raw);
+      if (dt == null) return raw;
+      return dateFormat.format(dt);
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  // Convierte dd/MM/yyyy → yyyy-MM-dd para guardar
+  String _normalizeDate(String input) {
+    if (input.isEmpty) return "";
+    try {
+      final dt = dateFormat.parseStrict(input);
+      return dt.toIso8601String().split("T").first;
+    } catch (_) {
+      return input;
+    }
   }
 
   @override
@@ -156,8 +193,6 @@ class _FilterDialogState extends State<FilterDialog> {
 
   Widget _buildConditionRow(int index) {
     final cond = conditions[index];
-    final controller = controllers[index];
-    final value2Controller = value2Controllers[index];
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -183,57 +218,7 @@ class _FilterDialogState extends State<FilterDialog> {
           const SizedBox(width: 6),
           Expanded(
             flex: 3,
-            child: cond.operator == "between"
-                ? Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: controller,
-                          focusNode: index == 0 ? _firstFocus : null,
-                          style: const TextStyle(fontSize: 13),
-                          decoration: const InputDecoration(
-                            hintText: "Desde",
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 8),
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: (v) => cond.value = v,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: TextField(
-                          controller: value2Controller ??
-                              (value2Controllers[index] =
-                                  TextEditingController(
-                                      text: cond.value2?.toString() ?? "")),
-                          style: const TextStyle(fontSize: 13),
-                          decoration: const InputDecoration(
-                            hintText: "Hasta",
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 8),
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: (v) => cond.value2 = v,
-                        ),
-                      ),
-                    ],
-                  )
-                : TextField(
-                    controller: controller,
-                    focusNode: index == 0 ? _firstFocus : null,
-                    style: const TextStyle(fontSize: 13),
-                    decoration: const InputDecoration(
-                      hintText: "Valor",
-                      isDense: true,
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (v) => cond.value = v,
-                  ),
+            child: _buildValueEditor(index),
           ),
           const SizedBox(width: 6),
           IconButton(
@@ -253,81 +238,178 @@ class _FilterDialogState extends State<FilterDialog> {
     );
   }
 
-void _applyFilters() {
-  for (final c in conditions) {
-    final op = c.operator;
-    final v1 = c.value?.toString().trim() ?? "";
-    final v2 = c.value2?.toString().trim() ?? "";
-
-    // -----------------------------
-    // VALIDACIÓN PARA BETWEEN
-    // -----------------------------
-    if (op == "between") {
-      if (v1.isEmpty || v2.isEmpty) {
-        _showError("Debe ingresar ambos valores para 'Entre'.");
-        return;
-      }
-
-      if (widget.fieldType == "number") {
-        if (num.tryParse(v1) == null || num.tryParse(v2) == null) {
-          _showError("Los valores deben ser numéricos.");
-          return;
-        }
-      }
-
-      if (widget.fieldType == "date") {
-        if (DateTime.tryParse(v1) == null || DateTime.tryParse(v2) == null) {
-          _showError("Las fechas deben tener un formato válido (YYYY-MM-DD).");
-          return;
-        }
-      }
-
-      continue; // BETWEEN validado
-    }
-
-    // -----------------------------
-    // VALIDACIÓN PARA OPERADORES NORMALES
-    // -----------------------------
-    if (v1.isEmpty) {
-      _showError("Debe ingresar un valor para el filtro.");
-      return;
-    }
-
-    if (widget.fieldType == "number") {
-      if (num.tryParse(v1) == null) {
-        _showError("El valor debe ser numérico.");
-        return;
-      }
-    }
+  Widget _buildValueEditor(int index) {
+    final cond = conditions[index];
 
     if (widget.fieldType == "date") {
-      if (DateTime.tryParse(v1) == null) {
-        _showError("La fecha debe tener un formato válido (YYYY-MM-DD).");
-        return;
+      if (cond.operator == "between") {
+        return _buildBetweenDatePicker(index);
       }
+      return _buildSingleDatePicker(index);
     }
 
-    if (widget.fieldType == "bool") {
-      if (v1.toLowerCase() != "true" && v1.toLowerCase() != "false") {
-        _showError("El valor debe ser true o false.");
-        return;
-      }
-    }
+    // Editor normal (string, number, bool)
+    return TextField(
+      controller: controllers[index],
+      focusNode: index == 0 ? _firstFocus : null,
+      style: const TextStyle(fontSize: 13),
+      decoration: const InputDecoration(
+        hintText: "Valor",
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        border: OutlineInputBorder(),
+      ),
+      onChanged: (v) => cond.value = v,
+    );
   }
 
-  // Si todo está bien → aplicar filtros
-  Navigator.pop(
-    context,
-    ColumnFilter(
-      field: widget.field,
-      logic: logic,
-      conditions: conditions,
-    ),
-  );
-}
+  Widget _buildSingleDatePicker(int index) {
+    final cond = conditions[index];
+    final controller = controllers[index];
 
-void _showError(String msg) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(msg)),
-  );
-}}
+    return InkWell(
+      onTap: () async {
+        final initial = DateTime.tryParse(cond.value ?? "") ?? DateTime.now();
+
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: initial,
+          firstDate: DateTime(1900),
+          lastDate: DateTime(2100),
+          locale: const Locale('es', 'CR'),
+        );
+
+        if (picked != null) {
+          cond.value = picked.toIso8601String().split("T").first;
+          controller.text = dateFormat.format(picked);
+          setState(() {});
+        }
+      },
+      child: IgnorePointer(
+        child: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: "Seleccione fecha",
+            isDense: true,
+            border: OutlineInputBorder(),
+          ),
+          style: const TextStyle(fontSize: 13),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBetweenDatePicker(int index) {
+    final cond = conditions[index];
+    final controller1 = controllers[index];
+    final controller2 = value2Controllers[index] ??
+        (value2Controllers[index] = TextEditingController());
+
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            onTap: () async {
+              final initial =
+                  DateTime.tryParse(cond.value ?? "") ?? DateTime.now();
+
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: initial,
+                firstDate: DateTime(1900),
+                lastDate: DateTime(2100),
+                locale: const Locale('es', 'CR'),
+              );
+
+              if (picked != null) {
+                cond.value = picked.toIso8601String().split("T").first;
+                controller1.text = dateFormat.format(picked);
+                setState(() {});
+              }
+            },
+            child: IgnorePointer(
+              child: TextField(
+                controller: controller1,
+                decoration: const InputDecoration(
+                  hintText: "Desde",
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: InkWell(
+            onTap: () async {
+              final initial =
+                  DateTime.tryParse(cond.value2 ?? "") ?? DateTime.now();
+
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: initial,
+                firstDate: DateTime(1900),
+                lastDate: DateTime(2100),
+                locale: const Locale('es', 'CR'),
+              );
+
+              if (picked != null) {
+                cond.value2 = picked.toIso8601String().split("T").first;
+                controller2.text = dateFormat.format(picked);
+                setState(() {});
+              }
+            },
+            child: IgnorePointer(
+              child: TextField(
+                controller: controller2,
+                decoration: const InputDecoration(
+                  hintText: "Hasta",
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _applyFilters() {
+    for (final c in conditions) {
+      final op = c.operator;
+
+      if (widget.fieldType == "date") {
+        if (op == "between") {
+          if (c.value == null || c.value!.isEmpty || c.value2 == null || c.value2!.isEmpty) {
+            _showError("Debe seleccionar ambas fechas.");
+            return;
+          }
+        } else {
+          if (c.value == null || c.value!.isEmpty) {
+            _showError("Debe seleccionar una fecha.");
+            return;
+          }
+        }
+      }
+    }
+
+    Navigator.pop(
+      context,
+      ColumnFilter(
+        field: widget.field,
+        logic: logic,
+        conditions: conditions,
+      ),
+    );
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
+}
