@@ -60,7 +60,7 @@ class DynamicListController {
           .map<FieldDefinition>((e) => FieldDefinition.fromJson(e))
           .toList();
   
-      debugPrint("Metadata types: ${metadataFields.map((f) => "${f.name}=${f.dataType}").toList()}");
+      //debugPrint("Metadata types: ${metadataFields.map((f) => "${f.name}=${f.dataType}").toList()}");
 
       // 2) Cargar datos
       final List<Map<String, dynamic>> data =
@@ -72,7 +72,7 @@ class DynamicListController {
       );
 
       rows = data;
-      debugPrint("ROW RAW: ${data.first}");
+      //debugPrint("ROW RAW: ${data.first}");
 
       // 3) Construir columnas desde metadata (NO desde rows)
       columns = metadataFields.map((f) {
@@ -289,7 +289,7 @@ String inferType(String fieldName) {
 
   // Para números, metadata NO sirve → inferir desde datos
   final inferred = inferTypeFromRows(fieldName, rows);
-  debugPrint("inferered $inferred");
+  //debugPrint("inferered $inferred");
   if (inferred == "number") return "number";
 
   return "string";

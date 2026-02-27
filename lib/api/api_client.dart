@@ -144,7 +144,7 @@ Future<Map<String, dynamic>> saveData(
 
   // 🔥 Manejo seguro del body
   if (response.body.isEmpty) {
-    debugPrint("⚠️ BODY VACÍO, devolviendo success=true");
+   // debugPrint("⚠️ BODY VACÍO, devolviendo success=true");
     return {"success": true};
   }
 
@@ -227,7 +227,7 @@ Future<List<Map<String, dynamic>>> getLookupRows(
   }
 
   if (res.body.isEmpty) {
-    debugPrint(">>> EMPTY BODY");
+  //  debugPrint(">>> EMPTY BODY");
     return [];
   }
 
@@ -236,12 +236,12 @@ Future<List<Map<String, dynamic>>> getLookupRows(
   try {
     decoded = jsonDecode(res.body);
   } catch (e) {
-    debugPrint(">>> JSON ERROR: $e");
+   // debugPrint(">>> JSON ERROR: $e");
     return [];
   }
 
   if (decoded is! List) {
-    debugPrint(">>> NOT A LIST: $decoded");
+  //  debugPrint(">>> NOT A LIST: $decoded");
     return [];
   }
 

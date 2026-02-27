@@ -29,8 +29,8 @@ class DynamicListTable extends StatelessWidget {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
           child: Builder(builder: (_) {
-             debugPrint("DynamicListTable.build() ejecutado. Columnas visibles: "
-            "${controller.columns.where((c) => c.visible).length}");
+         //    debugPrint("DynamicListTable.build() ejecutado. Columnas visibles: "
+         //   "${controller.columns.where((c) => c.visible).length}");
         //child:
          return DataTable(
           dataRowMinHeight: 32,
