@@ -129,8 +129,8 @@ class DynamicListController {
   }
 */
 Future<void> applyFilter(ColumnFilter filter) async {
-  print("Filtrando por campo: ${filter.field}");
-  print("Campos reales de la fila: ${rows.first.keys}");
+ // print("Filtrando por campo: ${filter.field}");
+  //print("Campos reales de la fila: ${rows.first.keys}");
 
   columnFilters[filter.field] = filter;
 

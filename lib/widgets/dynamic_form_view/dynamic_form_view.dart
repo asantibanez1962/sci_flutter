@@ -190,14 +190,15 @@ if (field.fieldType == "number") {
 }
 
 if (field.fieldType == "date") {
-  return DateFieldWidget(
-    label: field.label,
-    value: value,
-    modified: modified,
-    onChanged: (v) {
-      setState(() => controller.formData[name] = convertDMYtoISO(v));
-    },
-  );
+  return DynamicDateField(
+  label: field.label,
+  value: value,
+  modified: modified,
+  errorText: error,
+  onChanged: (iso) {
+    setState(() => controller.formData[name] = iso);
+  },
+);
 }
 
 if (field.fieldType == "autocomplete") {

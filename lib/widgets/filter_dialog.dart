@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
 import '../filters/column_filter.dart';
 import '../models/filter_condition.dart';
 import '../models/filter_operator.dart';
+import '../widgets/dynamic_form_view/fields/date_field.dart';
 
 class FilterDialog extends StatefulWidget {
   final String field;
@@ -29,8 +28,6 @@ class _FilterDialogState extends State<FilterDialog> {
 
   String logic = "AND";
   final FocusNode _firstFocus = FocusNode();
-
-  final dateFormat = DateFormat('dd/MM/yyyy', 'es_CR');
 
   @override
   void initState() {
@@ -72,51 +69,18 @@ class _FilterDialogState extends State<FilterDialog> {
     }
 
     controllers = conditions
-        .map((c) => TextEditingController(text: _displayValue(c.value)))
+        .map((c) => TextEditingController(text: c.value ?? ""))
         .toList();
 
     value2Controllers = conditions
         .map((c) => c.value2 != null
-            ? TextEditingController(text: _displayValue(c.value2))
+            ? TextEditingController(text: c.value2)
             : null)
         .toList();
-
-    // Normalizar operadores inválidos
-    final validValues = operators.map((o) => o.value).toSet();
-    for (final c in conditions) {
-      if (!validValues.contains(c.operator)) {
-        c.operator = operators.first.value;
-      }
-    }
 
     Future.delayed(Duration.zero, () {
       if (_firstFocus.canRequestFocus) _firstFocus.requestFocus();
     });
-  }
-
-  // Convierte ISO → dd/MM/yyyy para mostrar
-  String _displayValue(String? raw) {
-    if (raw == null || raw.isEmpty) return "";
-    if (widget.fieldType != "date") return raw;
-
-    try {
-      final dt = DateTime.tryParse(raw);
-      if (dt == null) return raw;
-      return dateFormat.format(dt);
-    } catch (_) {
-      return raw;
-    }
-  }
-
-  // Convierte dd/MM/yyyy → yyyy-MM-dd para guardar
-  String _normalizeDate(String input) {
-    if (input.isEmpty) return "";
-    try {
-      final dt = dateFormat.parseStrict(input);
-      return dt.toIso8601String().split("T").first;
-    } catch (_) {
-      return input;
-    }
   }
 
   @override
@@ -243,12 +207,31 @@ class _FilterDialogState extends State<FilterDialog> {
 
     if (widget.fieldType == "date") {
       if (cond.operator == "between") {
-        return _buildBetweenDatePicker(index);
+        return DynamicDateField(
+          label: "Fecha",
+          isRange: true,
+          value: cond.value,
+          value2: cond.value2,
+          onChangedRange: (v1, v2) {
+          setState(() {
+              cond.value = v1;
+              cond.value2 = v2;
+            });
+          },
+        );
       }
-      return _buildSingleDatePicker(index);
+
+      return DynamicDateField(
+        label: "Fecha",
+        value: cond.value,
+        onChanged: (v) {
+        setState(() {
+          cond.value = v;
+        });
+        },
+      );
     }
 
-    // Editor normal (string, number, bool)
     return TextField(
       controller: controllers[index],
       focusNode: index == 0 ? _firstFocus : null,
@@ -263,127 +246,10 @@ class _FilterDialogState extends State<FilterDialog> {
     );
   }
 
-  Widget _buildSingleDatePicker(int index) {
-    final cond = conditions[index];
-    final controller = controllers[index];
-
-    return InkWell(
-      onTap: () async {
-        final initial = DateTime.tryParse(cond.value ?? "") ?? DateTime.now();
-
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: initial,
-          firstDate: DateTime(1900),
-          lastDate: DateTime(2100),
-          locale: const Locale('es', 'CR'),
-        );
-
-        if (picked != null) {
-          cond.value = picked.toIso8601String().split("T").first;
-          controller.text = dateFormat.format(picked);
-          setState(() {});
-        }
-      },
-      child: IgnorePointer(
-        child: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: "Seleccione fecha",
-            isDense: true,
-            border: OutlineInputBorder(),
-          ),
-          style: const TextStyle(fontSize: 13),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBetweenDatePicker(int index) {
-    final cond = conditions[index];
-    final controller1 = controllers[index];
-    final controller2 = value2Controllers[index] ??
-        (value2Controllers[index] = TextEditingController());
-
-    return Row(
-      children: [
-        Expanded(
-          child: InkWell(
-            onTap: () async {
-              final initial =
-                  DateTime.tryParse(cond.value ?? "") ?? DateTime.now();
-
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: initial,
-                firstDate: DateTime(1900),
-                lastDate: DateTime(2100),
-                locale: const Locale('es', 'CR'),
-              );
-
-              if (picked != null) {
-                cond.value = picked.toIso8601String().split("T").first;
-                controller1.text = dateFormat.format(picked);
-                setState(() {});
-              }
-            },
-            child: IgnorePointer(
-              child: TextField(
-                controller: controller1,
-                decoration: const InputDecoration(
-                  hintText: "Desde",
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                ),
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: InkWell(
-            onTap: () async {
-              final initial =
-                  DateTime.tryParse(cond.value2 ?? "") ?? DateTime.now();
-
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: initial,
-                firstDate: DateTime(1900),
-                lastDate: DateTime(2100),
-                locale: const Locale('es', 'CR'),
-              );
-
-              if (picked != null) {
-                cond.value2 = picked.toIso8601String().split("T").first;
-                controller2.text = dateFormat.format(picked);
-                setState(() {});
-              }
-            },
-            child: IgnorePointer(
-              child: TextField(
-                controller: controller2,
-                decoration: const InputDecoration(
-                  hintText: "Hasta",
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                ),
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   void _applyFilters() {
     for (final c in conditions) {
-      final op = c.operator;
-
       if (widget.fieldType == "date") {
-        if (op == "between") {
+        if (c.operator == "between") {
           if (c.value == null || c.value!.isEmpty || c.value2 == null || c.value2!.isEmpty) {
             _showError("Debe seleccionar ambas fechas.");
             return;
