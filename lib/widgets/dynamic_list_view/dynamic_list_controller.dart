@@ -47,58 +47,94 @@ class DynamicListController {
     }
   }
 
-  Future<void> _loadData() async {
-    try {
-      final filtersJson =
-          columnFilters.values.map((f) => f.toJson()).toList();
 
-      // 1) Cargar metadata primero
-      final rawColumns =
-          await state.widget.api.getColumns(state.widget.entity.name);
+Future<void> _loadData() async {
+  try {
+    print("Cargando datos de entidad: ${state.widget.entity.name}");
+print("Filtros aplicados: ${state.widget.parentFilter}");
 
-      metadataFields = rawColumns
-          .map<FieldDefinition>((e) => FieldDefinition.fromJson(e))
-          .toList();
-  
-      //debugPrint("Metadata types: ${metadataFields.map((f) => "${f.name}=${f.dataType}").toList()}");
+    // 1) Filtros de columnas
+    final columnFiltersJson =
+        columnFilters.values.map((f) => f.toJson()).toList();
 
-      // 2) Cargar datos
-      final List<Map<String, dynamic>> data =
-          List<Map<String, dynamic>>.from(
-        await state.widget.api.getList(
-          state.widget.entity.name,
-          filters: filtersJson.isEmpty ? null : filtersJson,
-        ),
-      );
-
-      rows = data;
-      //debugPrint("ROW RAW: ${data.first}");
-
-      // 3) Construir columnas desde metadata (NO desde rows)
-      columns = metadataFields.map((f) {
-        return ColumnDefinition(
-          field: f.name,
-          label: f.label,
-          visible: true,
-          fieldType: f.fieldType,
-        );
-      }).toList();
-
-     
-      
-      // 4) Cargar lookups
-      await loadLookups();
-
-      // 5) Aplicar visibilidad guardada
-      await _loadColumnVisibility();
-
-      if (!isDisposed && state.mounted) {
-        state.setState(() {});
-      }
-    } catch (e) {
-      debugPrint("❌ Error cargando datos: $e");
+print("Filtros de columnas: $columnFiltersJson");
+    // 2) Filtros de relación (parentFilter)
+    final List<Map<String, dynamic>> relationFilters = [];
+    if (state.widget.parentFilter != null) {
+      state.widget.parentFilter!.forEach((field, value) {
+        relationFilters.add({
+          "field": field,
+          "logic": value["logic"] ,
+          "conditions":value["conditions"],
+        });
+      });
     }
+
+/* era
+relationFilters.add({
+  "field": field,
+  "operator": "equals",
+  "value": value,
+});
+*/
+
+    final allFilters = [
+      ...relationFilters,
+      ...columnFiltersJson,
+    ];
+
+print("all filter: $allFilters");
+
+    // 3) Metadata
+    final rawColumns =
+        await state.widget.api.getColumns(state.widget.entity.name);
+
+print("2");
+    metadataFields = rawColumns
+        .map<FieldDefinition>((e) => FieldDefinition.fromJson(e))
+        .toList();
+print("3");
+    // 4) Datos
+ /*   final List<Map<String, dynamic>> data =
+        List<Map<String, dynamic>>.from(
+      await state.widget.api.getList(
+        state.widget.entity.name,
+        filters: allFilters.isEmpty ? null : allFilters,
+      ),
+    );
+print("4");
+    rows = data;*/
+
+ rows = await state.widget.api.getList(
+    state.widget.entity.name,
+    filters: allFilters.isEmpty ? null : allFilters,
+  );
+  print("4.1");
+    // 5) Columnas
+    columns = metadataFields.map((f) {
+      return ColumnDefinition(
+        field: f.name,
+        label: f.label,
+        visible: true,
+        fieldType: f.fieldType,
+      );
+    }).toList();
+
+print("Cargando datos de entidad 2: ${state.widget.entity.name}");
+print("Filtros aplicados: ${state.widget.parentFilter}");
+print("antes de load lookups");
+
+    await loadLookups();
+    print("antes de load column visibility");
+    await _loadColumnVisibility();
+
+    if (!isDisposed && state.mounted) {
+      state.setState(() {});
+    }
+  } catch (e) {
+    debugPrint("❌ Error cargando datos: $e");
   }
+}
 
   Future<void> _loadColumnVisibility() async {
     final prefs =
@@ -120,15 +156,7 @@ class DynamicListController {
           }
   }
 
-/*
-  void applyFilter(ColumnFilter filter) {
-    print("Filtrando por campo: ${filter.field}");
-    print("Campos reales de la fila: ${rows.first.keys}");
-    columnFilters[filter.field] = filter;
-    _loadData();
-  }
-*/
-Future<void> applyFilter(ColumnFilter filter) async {
+/*Future<void> applyFilter(ColumnFilter filter) async {
  // print("Filtrando por campo: ${filter.field}");
   //print("Campos reales de la fila: ${rows.first.keys}");
 
@@ -145,7 +173,54 @@ Future<void> applyFilter(ColumnFilter filter) async {
     state.setState(() {});
   }
 }
+*/
 
+Future<void> applyFilter(ColumnFilter filter) async {
+  columnFilters[filter.field] = filter;
+
+  final columnFiltersJson =
+      columnFilters.values.map((f) => f.toJson()).toList();
+
+  final List<Map<String, dynamic>> relationFilters = [];
+  if (state.widget.parentFilter != null) {
+    state.widget.parentFilter!.forEach((field, value) {
+      relationFilters.add({
+        "field": field,
+        "operator": "equals",
+        "value": value,
+      });
+    });
+  }
+
+  final allFilters = [
+    ...relationFilters,
+    ...columnFiltersJson,
+  ];
+print("Filtros ALL APPLY: $allFilters");
+  rows = await state.widget.api.getList(
+    state.widget.entity.name,
+    filters: allFilters.isEmpty ? null : allFilters,
+  );
+
+  if (!isDisposed && state.mounted) {
+    state.setState(() {});
+  }
+}
+
+/*
+ List<Map<String, dynamic>> rows = [];
+print("3");
+    // 4) Datos
+    final List<Map<String, dynamic>> data =
+        List<Map<String, dynamic>>.from(
+      await state.widget.api.getList(
+        state.widget.entity.name,
+        filters: allFilters.isEmpty ? null : allFilters,
+      ),
+    );
+print("4");
+
+*/
   void clearFilter(String field) {
     columnFilters.remove(field);
     _loadData();

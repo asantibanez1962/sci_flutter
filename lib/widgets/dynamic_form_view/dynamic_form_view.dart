@@ -19,6 +19,7 @@ class DynamicFormView extends StatefulWidget {
   final Map<String, dynamic>? initialData;
   final Future<void> Function() onClose;
   final Future<bool> Function()? onRequestClose;
+  final List<String>? visibleFields;
 
   const DynamicFormView({
     super.key,
@@ -27,6 +28,8 @@ class DynamicFormView extends StatefulWidget {
     required this.initialData,
     required this.onClose,
     this.onRequestClose,
+    this.visibleFields,
+
   });
 
   @override
@@ -52,6 +55,10 @@ class DynamicFormViewState extends State<DynamicFormView> {
 
   @override
   Widget build(BuildContext context) {
+     print("DynamicFormView → entity: ${widget.entity.name}");
+  print("DynamicFormView → visibleFields: ${widget.visibleFields}");
+  print("DynamicFormView → entity fields: ${widget.entity.fields.map((f) => f.name).toList()}");
+
     return PopScope(
       canPop: !controller.hasUnsavedChanges,
       onPopInvokedWithResult: (didPop, result) async {
@@ -76,6 +83,11 @@ class DynamicFormViewState extends State<DynamicFormView> {
   }
 
   Widget _buildBody() {
+    final fieldsToShow = widget.visibleFields == null
+    ? widget.entity.fields
+    : widget.entity.fields
+        .where((f) => widget.visibleFields!.contains(f.name))
+        .toList();
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -84,24 +96,31 @@ class DynamicFormViewState extends State<DynamicFormView> {
           Expanded(
             child: ListView(
               children: [
-                ...widget.entity.fields.map(
+              ...fieldsToShow.map(
+                (field) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _buildField(field),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 36,
+                child: ElevatedButton(
+                  onPressed: hasValidationErrors ? null : _save,
+                  child: const Text(
+                    "Guardar",
+                    style: TextStyle(fontSize: 13),
+                     ),
+                    ),
+                 ),
+                 ],
+
+                /*...widget.entity.fields.map(
                   (field) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: _buildField(field),
                   ),
-                ),
-                const SizedBox(height: 16),
-               SizedBox(
-                  height: 36,
-                  child: ElevatedButton(
-                    onPressed: hasValidationErrors ? null : _save,
-                    child: const Text(
-                      "Guardar",
-                      style: TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ),
-              ],
+                ),*/
             ),
           ),
         ],

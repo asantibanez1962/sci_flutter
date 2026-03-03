@@ -9,7 +9,7 @@ import 'dynamic_list_table.dart';
 class DynamicListView extends StatefulWidget {
   final EntityDefinition entity;
   final ApiClient api;
-
+  final Map<String, dynamic>? parentFilter;
   final Function(Map<String, dynamic>) onEdit;
   final Function() onCreate;
 
@@ -19,6 +19,7 @@ class DynamicListView extends StatefulWidget {
     required this.api,
     required this.onEdit,
     required this.onCreate,
+     this.parentFilter,
   });
 
   @override
@@ -32,7 +33,20 @@ class _DynamicListViewState extends State<DynamicListView> {
   void initState() {
     super.initState();
     controller = DynamicListController(this);
-    controller.init();
+  //  controller.parentFilter = widget.parentFilter;
+
+    controller.init(); // ✔ carga inicial
+  }
+
+  @override
+  void didUpdateWidget(covariant DynamicListView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // ✔ recargar si cambia la entidad o el filtro
+    if (oldWidget.entity != widget.entity ||
+        oldWidget.parentFilter != widget.parentFilter) {
+      controller.init();
+    }
   }
 
   @override

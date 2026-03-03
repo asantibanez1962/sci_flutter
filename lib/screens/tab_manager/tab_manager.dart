@@ -10,15 +10,19 @@ import 'tab_type.dart';
 import 'tab_colors.dart';
 import '../../services/tab_persistence.dart';
 import 'tab_view_wrapper.dart';
+import '../../widgets/dynamic_form_view_master/dynamicformviewmaster.dart';
+import '../../models/form_metadata.dart';
 
 class TabManager extends StatefulWidget {
   final ApiClient api;
   final List<EntityDefinition> entities;
+  final Map<String, EntityDefinition> entityMap;
 
   const TabManager({
     super.key,
     required this.api,
     required this.entities,
+     required this.entityMap,
   });
 
   @override
@@ -29,12 +33,108 @@ class _TabManagerState extends State<TabManager>
     with TickerProviderStateMixin {
   late TabController controller;
   final List<TabItem> tabs = [];
+late final Map<String, EntityDefinition> entityMap;
 
   bool _restoring = false;
+
+Future<void> openFormForEdit(EntityDefinition entity, Map<String, dynamic> row) async {
+  final metadata = await widget.api.getFormMetadata(entity.name);
+
+  if (metadata.mode == "simple") {
+    _openEditTabSimple(entity, row);
+  } else {
+    _openEditTabMaster(entity, row, metadata);
+  }
+}
+
+void _openEditTabSimple(EntityDefinition entity, Map<String, dynamic> row) {
+  final tabId = "edit_${entity.name}_${row[entity.primaryKey]}";
+  final previousTabIndex = controller.index;
+  final formKey = GlobalKey<DynamicFormViewState>();
+
+  tabs.add(
+    TabItem(
+      id: tabId,
+      title: "Editar ${entity.displayName}",
+      icon: tabIcon(TabType.edit),
+      color: tabColor(TabType.edit),
+      closable: true,
+      formKey: formKey,
+      view: TabViewWrapper(
+        child: DynamicFormView(
+          key: formKey,
+          api: widget.api,
+          entity: entity,
+          initialData: row,
+          onClose: () async {
+            final ok = await formKey.currentState?.attemptClose() ?? true;
+            if (!ok) return;
+            final editIndex = tabs.indexWhere((t) => t.id == tabId);
+            if (editIndex != -1) _closeTab(editIndex);
+            controller.index = previousTabIndex;
+            setState(() {});
+          },
+        ),
+      ),
+    ),
+  );
+
+  if (!_restoring) {
+    _rebuildController(targetIndex: tabs.length - 1);
+    _saveTabs();
+  }
+}
+
+void _openEditTabMaster(
+  EntityDefinition entity,
+  Map<String, dynamic> row,
+  FormMetadata metadata,
+) {
+  final tabId = "edit_${entity.name}_${row[entity.primaryKey]}";
+  final previousTabIndex = controller.index;
+
+  tabs.add(
+    TabItem(
+      id: tabId,
+      title: "Editar ${entity.displayName}",
+      icon: tabIcon(TabType.edit),
+      color: tabColor(TabType.edit),
+      closable: true,
+      view: TabViewWrapper(
+        child: DynamicFormViewMaster(
+          metadata: metadata,
+          data: row,
+          api: widget.api,
+          entity: entity,
+          entityMap: entityMap, // mapa de entidades hijas
+          onClose: () async {
+            final editIndex = tabs.indexWhere((t) => t.id == tabId);
+            if (editIndex != -1) _closeTab(editIndex);
+            controller.index = previousTabIndex;
+            setState(() {});
+          },
+        ),
+      ),
+    ),
+  );
+
+  if (!_restoring) {
+    _rebuildController(targetIndex: tabs.length - 1);
+    _saveTabs();
+  }
+}
+
+void _openEditTab(EntityDefinition entity, Map<String, dynamic> row) {
+  openFormForEdit(entity, row);
+}
 
   @override
   void initState() {
     super.initState();
+
+ entityMap = {
+    for (var e in widget.entities) e.name: e
+  };
 
 //    pestaña fija "Entidades"
     tabs.add(
@@ -146,6 +246,17 @@ if (!_restoring) {
 
   }
 
+/*
+  void _openEditTab(
+  EntityDefinition entity,
+  Map<String, dynamic> row, {
+  bool save = true,
+}) {
+  openFormForEdit(entity, row);
+}
+*/
+
+/*
     void _openEditTab(
     EntityDefinition entity,
     Map<String, dynamic> row, {
@@ -190,6 +301,7 @@ if (!_restoring) {
     }
 
   }
+*/
 
   void _openCreateTab(EntityDefinition entity, {bool save = true}) {
     final tabId = "create_${entity.name}";
@@ -332,4 +444,7 @@ Widget build(BuildContext context) {
   );
 }
 */
+
+
 }
+

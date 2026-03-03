@@ -24,7 +24,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final api = ApiClient(baseUrl: "http://localhost:5249");
-
+  Map<String, EntityDefinition>? entityMap;
   List<EntityDefinition>? entities;
 
   @override
@@ -35,8 +35,12 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _loadEntities() async {
     final result = await api.getEntities();
+    final map = {
+    for (var e in result) e.name: e
+    };
     setState(() {
       entities = result;
+      entityMap = map;
     });
   }
 
@@ -59,13 +63,14 @@ class _MyAppState extends State<MyApp> {
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
       ),
-      home: entities == null
+      home: entities == null || entityMap == null
           ? const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             )
           : TabManager(
               api: api,
               entities: entities!,
+              entityMap: entityMap!,
             ),
     );
   }
