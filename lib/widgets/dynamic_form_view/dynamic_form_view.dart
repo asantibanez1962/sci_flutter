@@ -236,7 +236,10 @@ if (field.fieldType == "autocomplete") {
   }
 
   Future<void> _save() async {
-    //debugPrint("FORM DATA: ${controller.formData}");
+    print("=== DEBUG FORM DATA BEFORE SAVE ===");
+    print(controller.formData);
+    print("===================================");
+
     await controller.save();
     await widget.onClose();
   }

@@ -62,7 +62,7 @@ Future<EntityDefinition> getEntityMetadata(String entityName) async {
   // ---------------------------------------------
   if (filters == null || filters.isEmpty) {
     final url = Uri.parse('$baseUrl/data/$entity');
-    debugPrint("URL llamada (GET): $url");
+    //debugPrint("URL llamada (GET): $url");
 
     final res = await http.get(url);
     //debugPrint("Respuesta backend (GET): ${res.body}");
@@ -253,8 +253,8 @@ Future<FormMetadata> getFormMetadata(String entityName) async {
   final response = await http.get(
     Uri.parse('$baseUrl/metadata/form/$entityName'),
   );
-  debugPrint("📌 JSON metadata recibido para $entityName:");
-  debugPrint(response.body);   
+  //debugPrint("📌 JSON metadata recibido para $entityName:");
+  //debugPrint(response.body);   
 
   if (response.statusCode != 200) {
     throw Exception("Error loading form metadata for $entityName");

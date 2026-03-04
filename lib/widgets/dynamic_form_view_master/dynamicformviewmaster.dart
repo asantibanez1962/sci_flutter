@@ -4,6 +4,7 @@ import '../dynamic_list_view/dynamic_list_view.dart';
 import '../../api/api_client.dart';
 import '../../models/entity_definition.dart';
 import '../../models/form_metadata.dart';
+import '../../models/field_definition.dart';
 
 /// ------------------------------------------------------------
 /// WIDGET PRINCIPAL: DynamicFormViewMaster
@@ -135,7 +136,7 @@ Widget _buildHeader() {
     }
 
     //print("🟥 DATA DEL MAESTRO:");
-    widget.data.forEach((k, v) => print("   $k = $v"));
+    //widget.data.forEach((k, v) => print("   $k = $v"));
 
     switch (tab.type) {
       case "form":
@@ -166,41 +167,40 @@ Widget _buildHeader() {
         // ENTIDAD HIJA CORRECTA: usa relatedEntity, NO fieldName
         final childEntity =
             widget.entityMap[tab.relation!.relatedEntity]!; // ← Contacto
+            final fk = tab.relation!.foreignKey; // "SocioNegocioId"
+            final pk = widget.entity.primaryKey; // "Id"
+            final parentId = widget.data[pk] 
+              ?? widget.data[pk.toLowerCase()] 
+              ?? widget.data[pk.toUpperCase()];
+                //  print(            "TAB: ${tab.key} → entidad hija: ${childEntity.name}, FK: $fk, parentId: $parentId");
+              //   print("🟩 Construyendo DynamicListView con:");
+              //   print("   entity = ${childEntity.name}");
+              //    print("   parentFilter = { $pk: $parentId }");
+              // Ocultar la FK en el grid
 
-final fk = tab.relation!.foreignKey; // "SocioNegocioId"
+            childEntity.fields.removeWhere((f) => f.name == fk);
 
-         //final fk = tab.relation!.foreignKey; // "SocioNegocioId"
-        //final parentId = widget.data[widget.entity.primaryKey]; // "Id"
-final pk = widget.entity.primaryKey; // "Id"
-final parentId = widget.data[pk] 
-    ?? widget.data[pk.toLowerCase()] 
-    ?? widget.data[pk.toUpperCase()];
-
-      //  print(            "TAB: ${tab.key} → entidad hija: ${childEntity.name}, FK: $fk, parentId: $parentId");
-     //   print("🟩 Construyendo DynamicListView con:");
-     //   print("   entity = ${childEntity.name}");
-    //    print("   parentFilter = { $pk: $parentId }");
-
-        return DynamicListView(
-          entity: childEntity,
-          api: widget.api,
-       //   parentFilter: {fk: parentId},
-       parentFilter: {
-  fk: {
-    "logic": "AND",
-    "conditions": [
-      {
-        "operator": "=",
-        "value": parentId,
-        "value2": null
-      }
-    ]
-  }
-},
-
-          onEdit: (row) => widget.onEditChild?.call(tab, row),
-          onCreate: () => widget.onCreateChild?.call(tab),
-        );
+            return DynamicListView(
+                entity: childEntity,
+                api: widget.api,
+                hiddenColumns: [fk], 
+                parentFilter: {
+                fk: {
+                  "logic": "AND",
+                  "conditions": [
+                      {
+                        "operator": "=",
+                        "value": parentId,
+                        "value2": null
+                      }
+                    ]
+                  }
+          },
+            //  onEdit: (row) => widget.onEditChild?.call(tab, row),
+             // onCreate: () => widget.onCreateChild?.call(tab),
+            onEdit: (row) => _openChildPopup(tab, row),
+            onCreate: () => _openChildPopup(tab, null),
+          );     
 
       case "grid":
         return const Center(
@@ -213,4 +213,72 @@ final parentId = widget.data[pk]
         );
     }
   }
+
+
+
+Future<void> _openChildPopup(dynamic tab, Map<String, dynamic>? row) async {
+  final childEntity = widget.entityMap[tab.relation!.relatedEntity]!;
+  final fk = tab.relation!.foreignKey;
+
+  // 1. Cargar metadata del hijo
+  final rawColumns = await widget.api.getColumns(childEntity.name);
+  childEntity.fields =
+      rawColumns.map((e) => FieldDefinition.fromJson(e)).toList();
+
+  // 2. Ocultar la FK
+  //childEntity.fields.removeWhere((f) => f.name == fk);  no funciona luego crear un registro nuevo, porque el form espera ese campo aunque sea hidden. Mejor dejarlo y solo ocultar en el grid.
+  // NO eliminar la FK de metadata
+// Solo excluirla de visibleFields
+
+
+
+  // 3. Preparar initialData
+  final pk = widget.entity.primaryKey;
+  final parentId = widget.data[pk]
+      ?? widget.data[pk.toLowerCase()]
+      ?? widget.data[pk.toUpperCase()];
+
+  final initialData = row ?? { fk: parentId };
+print("=== DEBUG CHILD POPUP ===");
+print("Entidad hija: ${childEntity.name}");
+print("FK: $fk");
+print("ParentId: $parentId");
+print("InitialData: $initialData");
+  // 4. Campos visibles
+final visibleFields = childEntity.fields
+    .where((f) => f.name != fk)
+    .map((f) => f.name)
+    .toList();
+print("VisibleFields: $visibleFields");
+print("==========================");
+
+  await showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return Dialog(
+        insetPadding: const EdgeInsets.all(20),
+        child: SizedBox(
+          width: 600,
+          height: 500,
+          child: DynamicFormView(
+            api: widget.api,
+            entity: childEntity,
+            initialData: initialData,
+            visibleFields: visibleFields,
+            onClose: () async {
+              Navigator.of(context).pop();
+              setState(() {});
+            },
+            onRequestClose: () async {
+              Navigator.of(context).pop();
+              setState(() {});
+              return true;
+            },
+          ),
+        ),
+      );
+    },
+  );
 }
+    }

@@ -12,6 +12,7 @@ class DynamicListView extends StatefulWidget {
   final Map<String, dynamic>? parentFilter;
   final Function(Map<String, dynamic>) onEdit;
   final Function() onCreate;
+  final List<String>? hiddenColumns;
 
   const DynamicListView({
     super.key,
@@ -20,6 +21,7 @@ class DynamicListView extends StatefulWidget {
     required this.onEdit,
     required this.onCreate,
      this.parentFilter,
+     this.hiddenColumns
   });
 
   @override
@@ -30,13 +32,11 @@ class _DynamicListViewState extends State<DynamicListView> {
   late DynamicListController controller;
 
   @override
-  void initState() {
-    super.initState();
-    controller = DynamicListController(this);
-  //  controller.parentFilter = widget.parentFilter;
-
-    controller.init(); // ✔ carga inicial
-  }
+void initState() {
+  super.initState();
+  controller = DynamicListController( state: this,  hiddenColumns: widget.hiddenColumns, );
+  controller.init();
+}
 
   @override
   void didUpdateWidget(covariant DynamicListView oldWidget) {

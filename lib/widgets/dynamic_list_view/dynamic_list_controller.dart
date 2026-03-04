@@ -12,9 +12,13 @@ import '../../widgets/column_visibility_dialog.dart';
 
 class DynamicListController {
   final dynamic state;
+  final List<String> hiddenColumns;
 
+  DynamicListController({
+    required this.state,
+    List<String>? hiddenColumns,
+  }) : hiddenColumns = hiddenColumns ?? [];
 
-  DynamicListController(this.state);
 
   bool _disposed = false;
 
@@ -126,6 +130,15 @@ relationFilters.add({
         fieldType: f.fieldType,
       );
     }).toList();
+
+// 🔥 Ocultar columnas por código (FK)
+if (hiddenColumns.isNotEmpty) {
+  for (var col in columns) {
+    if (hiddenColumns.contains(col.field)) {
+      col.visible = false;
+    }
+  }
+}
 
 //print("Cargando datos de entidad 2: ${state.widget.entity.name}");
 //print("Filtros aplicados: ${state.widget.parentFilter}");
