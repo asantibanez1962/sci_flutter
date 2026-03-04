@@ -103,8 +103,8 @@ Widget _buildHeader() {
   /// CONTENIDO DE CADA TAB
   /// ------------------------------------------------------------
   Widget _buildTabViews() {
-    print("🟧 TabBarView children count = ${1 + widget.metadata.tabs.length}");
-    print("🟧 TabBar tabs count = ${tabController.length}");
+    // print("🟧 TabBarView children count = ${1 + widget.metadata.tabs.length}");
+    //print("🟧 TabBar tabs count = ${tabController.length}");
 
     return TabBarView(
       controller: tabController,
@@ -131,10 +131,10 @@ Widget _buildHeader() {
   /// ------------------------------------------------------------
   Widget _buildTabContent(FormTabMetadata tab) {
     if (tab.type == null) {
-      print("❌ ERROR: tab.type es NULL para tab.key=${tab.key}");
+      //print("❌ ERROR: tab.type es NULL para tab.key=${tab.key}");
     }
 
-    print("🟥 DATA DEL MAESTRO:");
+    //print("🟥 DATA DEL MAESTRO:");
     widget.data.forEach((k, v) => print("   $k = $v"));
 
     switch (tab.type) {
@@ -152,16 +152,16 @@ Widget _buildHeader() {
         );
 
       case "list":
-        print("🟦 Entrando a LIST TAB");
-        print("   tab.key = ${tab.key}");
-        print("   tab.type = ${tab.type}");
-        print("   tab.fields = ${tab.fields}");
-        print("   tab.columns = ${tab.columns}");
-        print("   tab.relation = ${tab.relation}");
-        print("   entityMap = ${widget.entityMap.keys.toList()}");
-        print("   relatedEntity = ${tab.relation?.relatedEntity}");
-        print("   foreignKey = ${tab.relation?.foreignKey}");
-        print("   parentId (by FK) = ${widget.data[tab.relation?.foreignKey]}");
+        //print("🟦 Entrando a LIST TAB");
+        //print("   tab.key = ${tab.key}");
+        //print("   tab.type = ${tab.type}");
+        //print("   tab.fields = ${tab.fields}");
+        //print("   tab.columns = ${tab.columns}");
+        //print("   tab.relation = ${tab.relation}");
+        //print("   entityMap = ${widget.entityMap.keys.toList()}");
+        //print("   relatedEntity = ${tab.relation?.relatedEntity}");
+        //print("   foreignKey = ${tab.relation?.foreignKey}");
+        //  print("   parentId (by FK) = ${widget.data[tab.relation?.foreignKey]}");
 
         // ENTIDAD HIJA CORRECTA: usa relatedEntity, NO fieldName
         final childEntity =
@@ -176,11 +176,10 @@ final parentId = widget.data[pk]
     ?? widget.data[pk.toLowerCase()] 
     ?? widget.data[pk.toUpperCase()];
 
-        print(
-            "TAB: ${tab.key} → entidad hija: ${childEntity.name}, FK: $fk, parentId: $parentId");
-        print("🟩 Construyendo DynamicListView con:");
-        print("   entity = ${childEntity.name}");
-        print("   parentFilter = { $pk: $parentId }");
+      //  print(            "TAB: ${tab.key} → entidad hija: ${childEntity.name}, FK: $fk, parentId: $parentId");
+     //   print("🟩 Construyendo DynamicListView con:");
+     //   print("   entity = ${childEntity.name}");
+    //    print("   parentFilter = { $pk: $parentId }");
 
         return DynamicListView(
           entity: childEntity,

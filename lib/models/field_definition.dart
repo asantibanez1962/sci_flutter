@@ -130,5 +130,6 @@ String normalizeType(String t) {
   if (t.contains("date") || t.contains("time"))
     return "date";
 
+  if (t == "lookup") return "lookup";
   return "string";
 }

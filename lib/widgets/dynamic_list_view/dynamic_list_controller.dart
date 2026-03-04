@@ -50,14 +50,14 @@ class DynamicListController {
 
 Future<void> _loadData() async {
   try {
-    print("Cargando datos de entidad: ${state.widget.entity.name}");
-print("Filtros aplicados: ${state.widget.parentFilter}");
+ //   print("Cargando datos de entidad: ${state.widget.entity.name}");
+//print("Filtros aplicados: ${state.widget.parentFilter}");
 
     // 1) Filtros de columnas
     final columnFiltersJson =
         columnFilters.values.map((f) => f.toJson()).toList();
 
-print("Filtros de columnas: $columnFiltersJson");
+//print("Filtros de columnas: $columnFiltersJson");
     // 2) Filtros de relación (parentFilter)
     final List<Map<String, dynamic>> relationFilters = [];
     if (state.widget.parentFilter != null) {
@@ -83,17 +83,24 @@ relationFilters.add({
       ...columnFiltersJson,
     ];
 
-print("all filter: $allFilters");
+//print("all filter: $allFilters");
 
     // 3) Metadata
     final rawColumns =
         await state.widget.api.getColumns(state.widget.entity.name);
 
-print("2");
+//print("2");
     metadataFields = rawColumns
         .map<FieldDefinition>((e) => FieldDefinition.fromJson(e))
         .toList();
-print("3");
+
+   //     print("=== METADATA FIELDS ===");
+//for (var f in metadataFields) {
+//  print("FIELD: ${f.name} | type=${f.dataType} | lookupEntity=${f.lookupEntity}");
+//}
+//print("========================");
+
+//print("3");
     // 4) Datos
  /*   final List<Map<String, dynamic>> data =
         List<Map<String, dynamic>>.from(
@@ -102,14 +109,14 @@ print("3");
         filters: allFilters.isEmpty ? null : allFilters,
       ),
     );
-print("4");
+//print("4");
     rows = data;*/
 
  rows = await state.widget.api.getList(
     state.widget.entity.name,
     filters: allFilters.isEmpty ? null : allFilters,
   );
-  print("4.1");
+ // print("4.1");
     // 5) Columnas
     columns = metadataFields.map((f) {
       return ColumnDefinition(
@@ -120,12 +127,12 @@ print("4");
       );
     }).toList();
 
-print("Cargando datos de entidad 2: ${state.widget.entity.name}");
-print("Filtros aplicados: ${state.widget.parentFilter}");
-print("antes de load lookups");
+//print("Cargando datos de entidad 2: ${state.widget.entity.name}");
+//print("Filtros aplicados: ${state.widget.parentFilter}");
+//print("antes de load lookups");
 
     await loadLookups();
-    print("antes de load column visibility");
+    //print("antes de load column visibility");
     await _loadColumnVisibility();
 
     if (!isDisposed && state.mounted) {
@@ -196,7 +203,7 @@ Future<void> applyFilter(ColumnFilter filter) async {
     ...relationFilters,
     ...columnFiltersJson,
   ];
-print("Filtros ALL APPLY: $allFilters");
+//print("Filtros ALL APPLY: $allFilters");
   rows = await state.widget.api.getList(
     state.widget.entity.name,
     filters: allFilters.isEmpty ? null : allFilters,
@@ -243,7 +250,12 @@ print("4");
 
         final url =
             Uri.parse("${state.widget.api.baseUrl}/lookup/$entity");
+
+            //print("CALLING LOOKUP for entity=$entity");
+//print("URL: $url");
+
         final res = await http.get(url);
+//print("LOOKUP RESPONSE for $entity => ${res.body}");
 
         if (res.statusCode != 200 || res.body.isEmpty) {
           lookupMaps[f.name] = {};

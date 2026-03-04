@@ -55,9 +55,9 @@ class DynamicFormViewState extends State<DynamicFormView> {
 
   @override
   Widget build(BuildContext context) {
-     print("DynamicFormView → entity: ${widget.entity.name}");
-  print("DynamicFormView → visibleFields: ${widget.visibleFields}");
-  print("DynamicFormView → entity fields: ${widget.entity.fields.map((f) => f.name).toList()}");
+     //print("DynamicFormView → entity: ${widget.entity.name}");
+  //print("DynamicFormView → visibleFields: ${widget.visibleFields}");
+ // print("DynamicFormView → entity fields: ${widget.entity.fields.map((f) => f.name).toList()}");
 
     return PopScope(
       canPop: !controller.hasUnsavedChanges,

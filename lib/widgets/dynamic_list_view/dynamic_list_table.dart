@@ -135,39 +135,83 @@ class DynamicListTable extends StatelessWidget {
                     ? Colors.blue.withValues(alpha: 0.08)
                     : null;
               }),
-              cells: controller.columns
-                  .where((c) => c.visible)
-                  .map((col) {
-                final value = row[col.field];
+cells: controller.columns
+    .where((c) => c.visible)
+    .map((col) {
+  // 1. Intentar PascalCase (metadata)
+  var value = row[col.field];
 
-                return DataCell(
-                  MouseRegion(
-                    onEnter: (_) => controller.state.setState(() {
-                      controller.hoveredRow = index;
-                    }),
-                    onExit: (_) => controller.state.setState(() {
-                      controller.hoveredRow = null;
-                    }),
-                    child: DefaultTextStyle(
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isHovered ? Colors.blue : Colors.black,
-                        fontWeight:
-                            isHovered ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                  child: () {
-                   //   debugPrint("CELL → field=${col.field}, lookup=${controller.lookupMaps.containsKey(col.field)}, value=$value");
-                      return controller.lookupMaps.containsKey(col.field)
-                          ? Text(
-                              controller.lookupMaps[col.field]![value] ??
-                                  value.toString(),
-                            )
-                          : buildCellValue(value);
-                    }(),                   ),
-                  ),
-                  onTap: () => onEdit(Map<String, dynamic>.from(row)),
-                );
-              }).toList(),
+  // 2. Si viene null, intentar camelCase (backend)
+  if (value == null) {
+    final camel = col.field[0].toLowerCase() + col.field.substring(1);
+    value = row[camel];
+  }
+
+  return DataCell(
+    MouseRegion(
+      onEnter: (_) => controller.state.setState(() {
+        controller.hoveredRow = index;
+      }),
+      onExit: (_) => controller.state.setState(() {
+        controller.hoveredRow = null;
+      }),
+      child: DefaultTextStyle(
+        style: TextStyle(
+          fontSize: 12,
+          color: isHovered ? Colors.blue : Colors.black,
+          fontWeight: isHovered ? FontWeight.w600 : FontWeight.normal,
+        ),
+        child: () {
+            final field = col.field;
+
+  // 1. Valor crudo del row
+  //print("CELL FIELD=$field | raw row value=${row[field]}");
+
+  // 2. Valor camelCase
+  final camel = field[0].toLowerCase() + field.substring(1);
+  //print("CELL FIELD=$field | camelCase value=${row[camel]}");
+
+  // 3. LookupMap disponible
+  //print("LOOKUP MAP for $field => ${controller.lookupMaps[field]}");
+
+
+  // 2. Intentar camelCase si viene null
+  if (value == null) {
+    final camel = field[0].toLowerCase() + field.substring(1);
+    value = row[camel];
+  }
+
+ // 3. Buscar lookup por el nombre REAL del campo lookup
+  //    Ej: TipoSocio → TipoSocioId
+  //String lookupKey = field;
+  // 4. Si existe lookup, mostrar label
+    String lookupKey = field;
+
+  if (controller.lookupMaps.containsKey(lookupKey)) {
+    final map = controller.lookupMaps[lookupKey]!;
+    final display = map[value];
+    return Text(display ?? value?.toString() ?? "");
+  }
+
+  // 4. Valor final que se usará
+  //print("LOOKUP MAP for ${col.field}Id => ${controller.lookupMaps[col.field + 'Id']}");
+  //print("FINAL VALUE USED for lookup: $value");
+
+          // Lookup: mostrar label en vez del ID
+          if (controller.lookupMaps.containsKey(col.field)) {
+            final map = controller.lookupMaps[col.field]!;
+            final display = map[value];
+            return Text(display ?? value?.toString() ?? "");
+          }
+
+          // No lookup → valor normal
+          return buildCellValue(value);
+        }(),
+      ),
+    ),
+    onTap: () => onEdit(Map<String, dynamic>.from(row)),
+  );
+}).toList(),              // hasta aquí
             );
           }).toList(),
         );
