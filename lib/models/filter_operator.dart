@@ -37,6 +37,21 @@ class FilterOperators {
   static List<FilterOperator> boolean = [
   FilterOperator("Es igual a", "="),
   FilterOperator("Es diferente de", "!="),
+  ];
+
   
+
+static final lookup = [
+    FilterOperator("Contiene", "contains"),
+    FilterOperator("No contiene", "notcontains"),
+    FilterOperator("Empieza con", "startswith"),
+    FilterOperator("Termina con", "endswith"),
+    FilterOperator("Igual a", "="),
+/*    FilterOperator("Distinto de", "!="),
+  FilterOperator("=", "Igual a"),
+  FilterOperator("!=", "Diferente de"),
+  FilterOperator("contains", "Contiene"),
+  FilterOperator("notcontains", "No contiene"),*/
 ];
+
 }

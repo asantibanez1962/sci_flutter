@@ -20,8 +20,8 @@ class DynamicListView extends StatefulWidget {
     required this.api,
     required this.onEdit,
     required this.onCreate,
-     this.parentFilter,
-     this.hiddenColumns
+    this.parentFilter,
+    this.hiddenColumns
   });
 
   @override
@@ -34,7 +34,7 @@ class _DynamicListViewState extends State<DynamicListView> {
   @override
 void initState() {
   super.initState();
-  controller = DynamicListController( state: this,  hiddenColumns: widget.hiddenColumns, );
+  controller = DynamicListController( state: this, hiddenColumns: widget.hiddenColumns, );
   controller.init();
 }
 

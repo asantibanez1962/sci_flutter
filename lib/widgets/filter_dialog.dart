@@ -8,12 +8,14 @@ class FilterDialog extends StatefulWidget {
   final String field;
   final String fieldType;
   final ColumnFilter? filter;
+  final Map<int, String>? lookupMap;
 
   const FilterDialog({
     super.key,
     required this.field,
     required this.fieldType,
     this.filter,
+    this.lookupMap,
   });
 
   @override
@@ -32,7 +34,8 @@ class _FilterDialogState extends State<FilterDialog> {
   @override
   void initState() {
     super.initState();
-
+    //print("tipo");
+//print(widget.fieldType);
     switch (widget.fieldType) {
       case "string":
         operators = FilterOperators.text;
@@ -46,6 +49,10 @@ class _FilterDialogState extends State<FilterDialog> {
       case "bool":
         operators = FilterOperators.boolean;
         break;
+       case "lookup": // 👈 NUEVO
+          operators = FilterOperators.lookup; 
+          break;
+
       default:
         operators = FilterOperators.text;
     }
@@ -232,6 +239,10 @@ class _FilterDialogState extends State<FilterDialog> {
       );
     }
 
+    if (widget.fieldType == "lookup") {
+      return _buildLookupEditor(index);
+    }
+
     return TextField(
       controller: controllers[index],
       focusNode: index == 0 ? _firstFocus : null,
@@ -248,6 +259,7 @@ class _FilterDialogState extends State<FilterDialog> {
 
   void _applyFilters() {
     for (final c in conditions) {
+      print("Validando condición: operator=${c.operator} | value=${c.value} | value2=${c.value2}");
       if (widget.fieldType == "date") {
         if (c.operator == "between") {
           if (c.value == null || c.value!.isEmpty || c.value2 == null || c.value2!.isEmpty) {
@@ -277,5 +289,64 @@ class _FilterDialogState extends State<FilterDialog> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg)),
     );
-  }
+   }
+
+Widget _buildLookupEditor(int index) {
+  final map = widget.lookupMap ?? {};
+  final entries = map.entries.toList();
+print("Construyendo editor lookup para ${widget.field} con ${entries.length} opciones");
+
+  return Autocomplete<MapEntry<int, String>>(
+    displayStringForOption: (opt) => opt.value,
+    optionsBuilder: (text) {
+      final q = text.text.toLowerCase();
+      return entries.where((e) => e.value.toLowerCase().contains(q));
+    },
+    onSelected: (opt) {
+      setState(() {
+        conditions[index].value = opt.key.toString(); // ID correcto
+      });
+    },
+    fieldViewBuilder: (context, controller, focusNode, onSubmit) {
+      // Mostrar label si ya hay un valor seleccionado
+      if (conditions[index].value != null && conditions[index].value!.isNotEmpty) {
+        final id = int.tryParse(conditions[index].value!);
+        if (id != null && map.containsKey(id)) {
+          controller.text = map[id]!;
+        }
+      }
+
+      return TextField(
+        controller: controller,
+        focusNode: focusNode,
+        decoration: const InputDecoration(
+          hintText: "Buscar...",
+          isDense: true,
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (text) {
+          // Si el usuario borra el texto → limpiar valor
+          if (text.isEmpty) {
+            conditions[index].value = "";
+            return;
+          }
+
+          // Si el texto coincide EXACTAMENTE con un label → asignar ID
+          final match = entries.firstWhere(
+            (e) => e.value.toLowerCase() == text.toLowerCase(),
+            orElse: () => const MapEntry(-1, ""),
+          );
+
+          if (match.key != -1) {
+            conditions[index].value = match.key.toString();
+          } else {
+            // Si no coincide → NO asignar nada todavía
+            conditions[index].value = "";
+          }
+        },
+      );
+    },
+  );
+}
+
 }

@@ -239,18 +239,19 @@ Future<void> _openChildPopup(dynamic tab, Map<String, dynamic>? row) async {
       ?? widget.data[pk.toUpperCase()];
 
   final initialData = row ?? { fk: parentId };
+  /*
 print("=== DEBUG CHILD POPUP ===");
 print("Entidad hija: ${childEntity.name}");
 print("FK: $fk");
 print("ParentId: $parentId");
-print("InitialData: $initialData");
+print("InitialData: $initialData");*/
   // 4. Campos visibles
 final visibleFields = childEntity.fields
     .where((f) => f.name != fk)
     .map((f) => f.name)
     .toList();
-print("VisibleFields: $visibleFields");
-print("==========================");
+/*print("VisibleFields: $visibleFields");
+print("==========================");*/
 
   await showDialog(
     context: context,

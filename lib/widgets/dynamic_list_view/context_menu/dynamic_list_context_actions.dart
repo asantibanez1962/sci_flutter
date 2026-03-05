@@ -4,6 +4,7 @@ import '../../../models/filter_condition.dart';
 import '../dynamic_list_controller.dart';
 import '../../filter_dialog.dart';
 
+
 class DynamicListContextActions {
   static Future<void> handle({
     required String selected,
@@ -81,6 +82,7 @@ class DynamicListContextActions {
             field: column,
             fieldType: controller.inferType(column),
             filter: controller.columnFilters[column],
+            lookupMap: controller.lookupMaps[column],
           ),
         );
 

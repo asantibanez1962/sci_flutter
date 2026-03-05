@@ -50,9 +50,9 @@ class DynamicListTable extends StatelessWidget {
               .map((col) {
             final field = col.field;
             final hasFilter = controller.columnFilters.containsKey(field);
-          //  debugPrint("inferType($field) = ${controller.inferType(field)}");
-          //  debugPrint("COL DEBUG => ${col.runtimeType} :: $col");
-          //  debugPrint("COLUMN FULL DEBUG => $col");
+   /*         debugPrint("inferType($field) = ${controller.inferType(field)}");
+            debugPrint("COL DEBUG => ${col.runtimeType} :: $col");
+            debugPrint("COLUMN FULL DEBUG => $col");*/
 
             return DataColumn(
              //  key: ValueKey(field), // ⭐ fuerza reconstrucción
@@ -163,46 +163,40 @@ cells: controller.columns
         ),
         child: () {
             final field = col.field;
+            // 1. Valor crudo del row
+            //print("CELL FIELD=$field | raw row value=${row[field]}");
 
-  // 1. Valor crudo del row
-  //print("CELL FIELD=$field | raw row value=${row[field]}");
+            // 2. Valor camelCase
+            final camel = field[0].toLowerCase() + field.substring(1);
+            //print("CELL FIELD=$field | camelCase value=${row[camel]}");
+            // 3. LookupMap disponible
+            //print("LOOKUP MAP for $field => ${controller.lookupMaps[field]}");
+            // 2. Intentar camelCase si viene null
+            if (value == null) {
+              final camel = field[0].toLowerCase() + field.substring(1);
+              value = row[camel];
+            }
+            // 3. Buscar lookup por el nombre REAL del campo lookup
+              //    Ej: TipoSocio → TipoSocioId
+              //String lookupKey = field;
+              // 4. Si existe lookup, mostrar label
+                String lookupKey = field;
 
-  // 2. Valor camelCase
-  final camel = field[0].toLowerCase() + field.substring(1);
-  //print("CELL FIELD=$field | camelCase value=${row[camel]}");
+              if (controller.lookupMaps.containsKey(lookupKey)) {
+                final map = controller.lookupMaps[lookupKey]!;
+                final display = map[value];
+                return Text(display ?? value?.toString() ?? "");
+              }
 
-  // 3. LookupMap disponible
-  //print("LOOKUP MAP for $field => ${controller.lookupMaps[field]}");
-
-
-  // 2. Intentar camelCase si viene null
-  if (value == null) {
-    final camel = field[0].toLowerCase() + field.substring(1);
-    value = row[camel];
-  }
-
- // 3. Buscar lookup por el nombre REAL del campo lookup
-  //    Ej: TipoSocio → TipoSocioId
-  //String lookupKey = field;
-  // 4. Si existe lookup, mostrar label
-    String lookupKey = field;
-
-  if (controller.lookupMaps.containsKey(lookupKey)) {
-    final map = controller.lookupMaps[lookupKey]!;
-    final display = map[value];
-    return Text(display ?? value?.toString() ?? "");
-  }
-
-  // 4. Valor final que se usará
-  //print("LOOKUP MAP for ${col.field}Id => ${controller.lookupMaps[col.field + 'Id']}");
-  //print("FINAL VALUE USED for lookup: $value");
-
-          // Lookup: mostrar label en vez del ID
-          if (controller.lookupMaps.containsKey(col.field)) {
-            final map = controller.lookupMaps[col.field]!;
-            final display = map[value];
-            return Text(display ?? value?.toString() ?? "");
-          }
+              // 4. Valor final que se usará
+              //print("LOOKUP MAP for ${col.field}Id => ${controller.lookupMaps[col.field + 'Id']}");
+              //print("FINAL VALUE USED for lookup: $value");
+              // Lookup: mostrar label en vez del ID
+              if (controller.lookupMaps.containsKey(col.field)) {
+                final map = controller.lookupMaps[col.field]!;
+                final display = map[value];
+                return Text(display ?? value?.toString() ?? "");
+              }
 
           // No lookup → valor normal
           return buildCellValue(value);
