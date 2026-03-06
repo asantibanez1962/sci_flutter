@@ -5,23 +5,29 @@ import 'context_menu/dynamic_list_context_menu.dart';
 import 'context_menu/dynamic_list_context_actions.dart';
 import 'utils/cell_value_builder.dart';
 
-class DynamicListTable extends StatelessWidget {
+class DynamicListTable extends StatefulWidget {
   final DynamicListController controller;
   final Function(Map<String, dynamic>) onEdit;
 
-  const DynamicListTable({
-    super.key,
+  const DynamicListTable({  super.key,
     required this.controller,
     required this.onEdit,
   });
+  @override
+  State<DynamicListTable> createState() => _DynamicListTableState();
+}
 
+class _DynamicListTableState extends State<DynamicListTable> {
 
   @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
     if (controller.rows.isEmpty) {
       return const Center(child: Text("No hay datos"));
     }
  //print(">>> dynamiclisttable.build()");
+   
+
     return AnimatedOpacity(
       
       opacity: controller.tableVisible ? 1.0 : 0.0,
@@ -75,6 +81,7 @@ class DynamicListTable extends StatelessWidget {
                     );
 
                     if (selected != null) {
+                      //if (!mounted) return;
                       await DynamicListContextActions.handle(
                         selected: selected,
                         column: field,
@@ -167,7 +174,7 @@ cells: controller.columns
             //print("CELL FIELD=$field | raw row value=${row[field]}");
 
             // 2. Valor camelCase
-            final camel = field[0].toLowerCase() + field.substring(1);
+            //final camel = field[0].toLowerCase() + field.substring(1);
             //print("CELL FIELD=$field | camelCase value=${row[camel]}");
             // 3. LookupMap disponible
             //print("LOOKUP MAP for $field => ${controller.lookupMaps[field]}");
@@ -203,7 +210,7 @@ cells: controller.columns
         }(),
       ),
     ),
-    onTap: () => onEdit(Map<String, dynamic>.from(row)),
+    onTap: () => widget.onEdit(Map<String, dynamic>.from(row)),
   );
 }).toList(),              // hasta aquí
             );

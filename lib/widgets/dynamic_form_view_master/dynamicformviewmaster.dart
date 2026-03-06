@@ -120,7 +120,7 @@ Widget _buildHeader() {
       indicatorColor: Colors.blueGrey.shade900,
       tabs: [
         const Tab(text: "General"), // ← Header como primer tab
-        ...widget.metadata.tabs.map((t) => Tab(text: t.title)).toList(),
+        ...widget.metadata.tabs.map((t) => Tab(text: t.title)), //.toList(),
       ],
     );
   }
@@ -147,7 +147,7 @@ Widget _buildHeader() {
             padding: const EdgeInsets.all(8),
             child: _buildTabContent(tab),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -156,9 +156,6 @@ Widget _buildHeader() {
   /// RENDERIZAR TAB SEGÚN TIPO
   /// ------------------------------------------------------------
   Widget _buildTabContent(FormTabMetadata tab) {
-    if (tab.type == null) {
-      //print("❌ ERROR: tab.type es NULL para tab.key=${tab.key}");
-    }
 
     //print("🟥 DATA DEL MAESTRO:");
     //widget.data.forEach((k, v) => print("   $k = $v"));
@@ -288,6 +285,8 @@ final visibleFields = childEntity.fields
     .toList();
 /*print("VisibleFields: $visibleFields");
 print("==========================");*/
+
+  if (!mounted) return;
 
   await showDialog(
     context: context,
