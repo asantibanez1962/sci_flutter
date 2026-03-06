@@ -47,7 +47,7 @@ class DynamicFormViewState extends State<DynamicFormView> {
       entity: widget.entity,
       initialData: widget.initialData,
     );
-
+    controller.loadRecord();
     controller.loadLookups().then((_) {
       if (mounted) setState(() {});
     });

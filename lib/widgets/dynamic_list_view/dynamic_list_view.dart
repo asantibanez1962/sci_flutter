@@ -30,24 +30,29 @@ class DynamicListView extends StatefulWidget {
 
 class _DynamicListViewState extends State<DynamicListView> {
   late DynamicListController controller;
+bool _initialized = false;
 
   @override
 void initState() {
   super.initState();
+  if (!_initialized) {
+   // print(">>> DynamicListView.initState() ejecutado para entidad: ${widget.entity.name}");
   controller = DynamicListController( state: this, hiddenColumns: widget.hiddenColumns, );
   controller.init();
+  _initialized = true;}
+
 }
 
-  @override
-  void didUpdateWidget(covariant DynamicListView oldWidget) {
-    super.didUpdateWidget(oldWidget);
+@override
+void didUpdateWidget(covariant DynamicListView oldWidget) {
+  super.didUpdateWidget(oldWidget);
 
-    // ✔ recargar si cambia la entidad o el filtro
-    if (oldWidget.entity != widget.entity ||
-        oldWidget.parentFilter != widget.parentFilter) {
-      controller.init();
-    }
+  final entityChanged = oldWidget.entity.name != widget.entity.name;
+
+  if (entityChanged) {
+    controller.init();
   }
+}
 
   @override
   void dispose() {
@@ -57,6 +62,7 @@ void initState() {
 
   @override
   Widget build(BuildContext context) {
+    //print(">>> DynamicListView.build() ejecutado para entidad: ${widget.entity.name}");
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: widget.onCreate,
@@ -66,4 +72,4 @@ void initState() {
       body: DynamicListTable(controller: controller, onEdit: widget.onEdit),
     );
   }
-}
+} 

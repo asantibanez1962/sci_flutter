@@ -26,6 +26,7 @@ class _MyAppState extends State<MyApp> {
   final api = ApiClient(baseUrl: "http://localhost:5249");
   Map<String, EntityDefinition>? entityMap;
   List<EntityDefinition>? entities;
+  late Future<List<EntityDefinition>> futureEntities;  //nuevo por bitacora doble
 
   @override
   void initState() {

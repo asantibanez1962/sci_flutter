@@ -157,6 +157,7 @@ void _openEditTab(EntityDefinition entity, Map<String, dynamic> row) {
 
   // helper central para recrear controller
   void _rebuildController({int? targetIndex}) {
+    /*se quita para probar bitacora doble
     final oldIndex = controller.index;
 
     controller.dispose();
@@ -168,8 +169,39 @@ void _openEditTab(EntityDefinition entity, Map<String, dynamic> row) {
       controller.index = oldIndex.clamp(0, tabs.length - 1);
     }
 
-    setState(() {});
-  }
+    setState(() {}); */
+ 
+  final old = controller;
+
+  final newIndex = (targetIndex ?? old.index).clamp(0, tabs.length - 1);
+
+  // Crear el nuevo controller
+  controller = TabController(
+    length: tabs.length,
+    vsync: this,
+    initialIndex: newIndex,
+  );
+
+  // Cambiar índice después de que TabBarView exista
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!mounted) return;
+    controller.index = newIndex;
+  });
+
+  // ⭐ Destruir el controller viejo DOS FRAMES después
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      old.dispose();
+    });
+  });
+
+  // Reconstruir TabManager UNA sola vez
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted) setState(() {});
+  });
+}
+  
 
   
 /*
@@ -231,18 +263,15 @@ void _openEntityTab(EntityDefinition entity, {bool save = true}) async {
     );
 
 if (!_restoring) {
-  _rebuildController();
+  _rebuildController(targetIndex: tabs.length - 1);
 
-  // ⭐ CAMBIO DE PESTAÑA DESPUÉS DEL FRAME
+  // Reconstruir TabManager UNA sola vez
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    controller.index = tabs.length - 1;
-    setState(() {});
+    if (mounted) setState(() {});
   });
-
 
   if (save) _saveTabs();
 }
-
 
   }
 
@@ -345,7 +374,7 @@ if (!_restoring) {
   }
 
   // ----------------- CERRAR PESTAÑAS -----------------
-
+/* se quitar por error luego de bitacora doble
   void _closeTab(int index) {
 
     if (index < 0 || index >= tabs.length) return;
@@ -372,7 +401,35 @@ if (!_restoring) {
  //   print("Tabs after close: ${tabs.map((t) => t.id).toList()}");
  //   print("Controller index after close = ${controller.index}");
   }
+*/
 
+void _closeTab(int index) {
+  if (index < 0 || index >= tabs.length) return;
+  if (!tabs[index].closable) return;
+
+  final oldIndex = controller.index;
+
+  tabs.removeAt(index);
+
+  if (!_restoring) {
+    // Ajustar índice ANTES de recrear el controller
+    int targetIndex;
+
+    if (tabs.isEmpty) {
+      targetIndex = 0;
+    } else if (oldIndex >= tabs.length) {
+      targetIndex = tabs.length - 1;
+    } else if (oldIndex == index) {
+      // Si cerraste la pestaña actual, retrocede una
+      targetIndex = (index - 1).clamp(0, tabs.length - 1);
+    } else {
+      targetIndex = oldIndex;
+    }
+
+    _rebuildController(targetIndex: targetIndex);
+    _saveTabs();
+  }
+}
   void _saveTabs() {
     TabPersistence.saveTabs(tabs);
   }
@@ -381,7 +438,7 @@ if (!_restoring) {
 
 @override
 Widget build(BuildContext context) {
-
+ print(">>> TabManager.build() ejecutado. Tabs abiertas: ${tabs.map((t) => t.id).toList()}");
   return Scaffold(
     appBar: AppBar(
       title: const Text("ERP Dinámico"),
@@ -430,20 +487,6 @@ Widget build(BuildContext context) {
     ),
   );
 }
-/*
-  Widget _buildTabContent() {
-  return TabBarView(
-    controller: controller,
-    children: [
-      for (final t in tabs)
-        KeyedSubtree(
-          key: ValueKey(t.id),
-          child: t.view,
-        )
-    ],
-  );
-}
-*/
 
 
 }

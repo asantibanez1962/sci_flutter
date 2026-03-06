@@ -22,11 +22,15 @@ class EntityDataScreen extends StatefulWidget {
   State<EntityDataScreen> createState() => _EntityDataScreenState();
 }
 
-class _EntityDataScreenState extends State<EntityDataScreen> {
+class _EntityDataScreenState extends State<EntityDataScreen>  with AutomaticKeepAliveClientMixin {
   @override
+  bool get wantKeepAlive => true;
   Widget build(BuildContext context) {
+    super.build(context);   
+   // print(">>> EntityDataScreen.build()");
     return Scaffold(
       body: DynamicListView(
+        key: ValueKey(widget.entity.name), // Forzar reconstrucción al cambiar de entidad ¿que pasa si es la misma?
         api: widget.api,
         entity: widget.entity,
 

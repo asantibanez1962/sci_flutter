@@ -166,7 +166,7 @@ Future<Map<String, dynamic>> saveData(
   }
 }//savedata
 
-
+/* se quita para agregar 
   Future<Map<String, dynamic>> getById(String entity, dynamic id) async {
     final url = Uri.parse('$baseUrl/data/$entity/$id');
 
@@ -177,7 +177,18 @@ Future<Map<String, dynamic>> saveData(
     }
 
     return jsonDecode(response.body) as Map<String, dynamic>;
+  }*/
+
+Future<Map<String, dynamic>> getById(String entity, dynamic id) async {
+  final url = Uri.parse("$baseUrl/data/$entity/$id");
+  final res = await http.get(url);
+
+  if (res.statusCode == 200) {
+    return jsonDecode(res.body);
   }
+
+  throw Exception("Error al cargar $entity/$id");
+}
 
   Future<List<Map<String, dynamic>>?> getColumnVisibility(String entity) async {
   final url = Uri.parse('$baseUrl/column-visibility/$entity');

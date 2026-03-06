@@ -10,7 +10,7 @@ class DynamicListHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final hiddenCount = controller.columns.where((c) => !c.visible).length;
-
+ //print(">>> dynamiclistheader.build()");
     return AppBar(
       // ⭐ Compactación ERP
       toolbarHeight: 42,

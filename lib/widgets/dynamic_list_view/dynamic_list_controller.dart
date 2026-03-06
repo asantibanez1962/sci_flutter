@@ -41,7 +41,7 @@ class DynamicListController {
   int? hoveredRow;
   
   late ColumnVisibilityApi columnApi;
-
+  
   Future<void> init() async {
     columnApi = ColumnVisibilityApi(baseUrl: state.widget.api.baseUrl);
     await _loadData();
@@ -54,12 +54,11 @@ class DynamicListController {
 
 Future<void> _loadData() async {
   try {
- //   print("Cargando datos de entidad: ${state.widget.entity.name}");
+    print("Cargando datos de entidad: ${state.widget.entity.name}");
 //print("Filtros aplicados: ${state.widget.parentFilter}");
 
     // 1) Filtros de columnas
-    final columnFiltersJson =
-    columnFilters.values.map((f) => f.toJson()).toList();
+    final columnFiltersJson =  columnFilters.values.map((f) => f.toJson()).toList();
 
 //print("Filtros de columnas: $columnFiltersJson");
     // 2) Filtros de relación (parentFilter)
@@ -142,7 +141,7 @@ if (hiddenColumns.isNotEmpty) {
 
     await loadLookups();
     //print("antes de load column visibility");
-    await _loadColumnVisibility();
+   // await _loadColumnVisibility();  se quita para evitar grabar 2 veces bitacora al inicio
 
     if (!isDisposed && state.mounted) {
       state.setState(() {});
@@ -205,20 +204,7 @@ print("Filtros ALL APPLY: $allFilters");
   }
 }
 
-/*
- List<Map<String, dynamic>> rows = [];
-print("3");
-    // 4) Datos
-    final List<Map<String, dynamic>> data =
-        List<Map<String, dynamic>>.from(
-      await state.widget.api.getList(
-        state.widget.entity.name,
-        filters: allFilters.isEmpty ? null : allFilters,
-      ),
-    );
-print("4");
 
-*/
   void clearFilter(String field) {
     columnFilters.remove(field);
     _loadData();

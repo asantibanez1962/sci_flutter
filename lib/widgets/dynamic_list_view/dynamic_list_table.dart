@@ -21,7 +21,7 @@ class DynamicListTable extends StatelessWidget {
     if (controller.rows.isEmpty) {
       return const Center(child: Text("No hay datos"));
     }
-
+ //print(">>> dynamiclisttable.build()");
     return AnimatedOpacity(
       
       opacity: controller.tableVisible ? 1.0 : 0.0,

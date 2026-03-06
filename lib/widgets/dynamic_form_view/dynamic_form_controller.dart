@@ -42,6 +42,29 @@ class DynamicFormController {
         f.fieldType == "autocomplete";
   }
 
+Future<void> loadRecord() async {
+  final pk = entity.primaryKey;
+  final id = originalData[pk];
+
+  if (id == null) return;
+
+  print(">>> Cargando registro real desde backend: ${entity.name} WHERE $pk = $id");
+
+  final fresh = await api.getById(entity.name, id);
+
+  originalData = Map<String, dynamic>.from(fresh);
+
+  for (var f in entity.fields) {
+    final name = f.name;
+    final value = fresh[name];
+
+    formData[name] = value;
+
+    if (controllers.containsKey(name)) {
+      controllers[name]!.text = value?.toString() ?? "";
+    }
+  }
+}
   Future<void> loadLookups() async {
     for (var f in entity.fields) {
       if (f.dataType == "lookup" && f.lookupEntity != null) {
