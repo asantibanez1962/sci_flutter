@@ -40,8 +40,7 @@ class _EntityDataScreenState extends State<EntityDataScreen>  with AutomaticKeep
         },
 
         // Abrir pestaña de creación
-        onCreate: () {
-          widget.onCreate();
+        onCreate: () {   widget.onCreate();
         },
       ),
     );

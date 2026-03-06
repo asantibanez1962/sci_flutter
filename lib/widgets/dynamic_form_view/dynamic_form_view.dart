@@ -42,6 +42,7 @@ class DynamicFormViewState extends State<DynamicFormView> {
   @override
   void initState() {
     super.initState();
+    
     controller = DynamicFormController(
       api: widget.api,
       entity: widget.entity,
@@ -51,6 +52,7 @@ class DynamicFormViewState extends State<DynamicFormView> {
     controller.loadLookups().then((_) {
       if (mounted) setState(() {});
     });
+    
   }
 
   @override

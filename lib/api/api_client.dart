@@ -275,5 +275,27 @@ Future<FormMetadata> getFormMetadata(String entityName) async {
   return FormMetadata.fromJson(jsonData);
 }
 
+Future<void> logUiEvent({
+  required String eventType,
+  String? entity,
+  int? recordId,
+  Map<String, dynamic>? details,
+}) async {
+  final url = Uri.parse("$baseUrl/ui-log");
+
+  final body = {
+    "eventType": eventType,
+    "entity": entity,
+    "recordId": recordId,
+    "details": details,
+    "userName": "pending" // luego integrás usuario real
+  };
+
+  await http.post(
+    url,
+    headers: {"Content-Type": "application/json"},
+    body: jsonEncode(body),
+  );
+}
 
 }

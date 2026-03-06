@@ -35,6 +35,11 @@ bool _initialized = false;
   @override
 void initState() {
   super.initState();
+  widget.api.logUiEvent(
+    eventType: "ui.open.list",
+    entity: widget.entity.name,
+    );
+
   if (!_initialized) {
    // print(">>> DynamicListView.initState() ejecutado para entidad: ${widget.entity.name}");
   controller = DynamicListController( state: this, hiddenColumns: widget.hiddenColumns, );

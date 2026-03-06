@@ -51,6 +51,31 @@ class _DynamicFormViewMasterState extends State<DynamicFormViewMaster>
       length: 1 + widget.metadata.tabs.length,
       vsync: this,
     );
+    tabController.addListener(() {
+  // Evitar logs mientras el usuario está arrastrando
+  if (tabController.indexIsChanging) return;
+
+  // Tab 0 = General → no logueamos
+  if (tabController.index == 0) return;
+
+  // Tab dinámico seleccionado
+  final tab = widget.metadata.tabs[tabController.index - 1];
+
+  // Obtener parentId del registro maestro
+  final pk = widget.entity.primaryKey;
+  final parentId = widget.data[pk]
+      ?? widget.data[pk.toLowerCase()]
+      ?? widget.data[pk.toUpperCase()];
+
+  widget.api.logUiEvent(
+    eventType: "ui.open.tab",
+    entity: widget.entity.name,
+    details: {
+      "tab": tab.key,
+      "parentId": parentId,
+    },
+  );
+});
   }
 
   @override
@@ -239,6 +264,17 @@ Future<void> _openChildPopup(dynamic tab, Map<String, dynamic>? row) async {
       ?? widget.data[pk.toUpperCase()];
 
   final initialData = row ?? { fk: parentId };
+  widget.api.logUiEvent(
+  eventType: "ui.open.child.form",
+  entity: childEntity.name,
+  recordId: row?["Id"],
+  details: {
+    "parentEntity": widget.entity.name,
+    "parentId": parentId,
+    "mode": row == null ? "create" : "edit"
+  },
+);
+
   /*
 print("=== DEBUG CHILD POPUP ===");
 print("Entidad hija: ${childEntity.name}");

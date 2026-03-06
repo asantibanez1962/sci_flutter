@@ -29,6 +29,7 @@ class TabManager extends StatefulWidget {
   State<TabManager> createState() => _TabManagerState();
 }
 
+
 class _TabManagerState extends State<TabManager>
     with TickerProviderStateMixin {
   late TabController controller;
@@ -37,8 +38,64 @@ late final Map<String, EntityDefinition> entityMap;
 
   bool _restoring = false;
 
+void _openCreateTabMaster(
+  EntityDefinition entity,
+  FormMetadata metadata, {
+  bool save = true,
+}) {
+  final tabId = "create_${entity.name}";
+  final previousTabIndex = controller.index;
+
+  // Como data es requerido y no-nullable, usamos un mapa vacío
+  final Map<String, dynamic> emptyData = {};
+
+  tabs.add(
+    TabItem(
+      id: tabId,
+      title: "Nuevo ${entity.displayName}",
+      icon: tabIcon(TabType.create),
+      color: tabColor(TabType.create),
+      closable: true,
+      view: TabViewWrapper(
+        child: DynamicFormViewMaster(
+          metadata: metadata,
+          data: emptyData,          // 👈 aquí NO puede ir null
+          api: widget.api,
+          entity: entity,
+          entityMap: entityMap,     // 👈 requerido, igual que en edit
+          onClose: () async {
+            final createIndex = tabs.indexWhere((t) => t.id == tabId);
+            if (createIndex != -1) _closeTab(createIndex);
+            controller.index = previousTabIndex;
+            setState(() {});
+          },
+        ),
+      ),
+    ),
+  );
+
+  if (!_restoring) {
+    _rebuildController(targetIndex: tabs.length - 1);
+    if (save) _saveTabs();
+  }
+}
 Future<void> openFormForEdit(EntityDefinition entity, Map<String, dynamic> row) async {
   final metadata = await widget.api.getFormMetadata(entity.name);
+ // Obtener PK
+  final pk = entity.primaryKey;
+  final recordId = row[pk];
+
+  // 🔥 Log de apertura del formulario (simple o master)
+  widget.api.logUiEvent(
+    eventType: "ui.open.form",
+    entity: entity.name,
+    recordId: recordId,
+    details: {
+      "mode": "edit",
+      "formType": metadata.mode, // simple o master
+    },
+  );
+
 
   if (metadata.mode == "simple") {
     _openEditTabSimple(entity, row);
@@ -85,6 +142,7 @@ void _openEditTabSimple(EntityDefinition entity, Map<String, dynamic> row) {
   }
 }
 
+
 void _openEditTabMaster(
   EntityDefinition entity,
   Map<String, dynamic> row,
@@ -124,6 +182,7 @@ void _openEditTabMaster(
   }
 }
 
+
 void _openEditTab(EntityDefinition entity, Map<String, dynamic> row) {
   openFormForEdit(entity, row);
 }
@@ -131,6 +190,16 @@ void _openEditTab(EntityDefinition entity, Map<String, dynamic> row) {
   @override
   void initState() {
     super.initState();
+
+  widget.api.logUiEvent(
+    eventType: "ui.open.app",
+    entity: null,
+    recordId: null,
+    details: {
+      "timestamp": DateTime.now().toIso8601String(),
+    },
+  );
+
 
  entityMap = {
     for (var e in widget.entities) e.name: e
@@ -257,7 +326,7 @@ void _openEntityTab(EntityDefinition entity, {bool save = true}) async {
           api: widget.api,
           entity: entity,
           onEdit: (entity, row) => _openEditTab(entity, row),
-          onCreate: () => _openCreateTab(entity),
+          onCreate: () => openFormForCreate(entity), //onCreate: () => _openCreateTab(entity),
         ),
       ),
     );
@@ -274,6 +343,31 @@ if (!_restoring) {
 }
 
   }
+
+Future<void> openFormForCreate(EntityDefinition entity) async {
+  // 1. Obtener metadata para saber si es simple o master
+  final metadata = await widget.api.getFormMetadata(entity.name);
+
+  // 2. Registrar bitácora
+  widget.api.logUiEvent(
+    eventType: "ui.open.form",
+    entity: entity.name,
+    recordId: null,
+    details: {
+      "mode": "create",
+      "formType": metadata.mode, // "simple" o "master"
+    },
+  );
+
+  // 3. Abrir formulario según tipo
+  if (metadata.mode == "simple") {
+    _openCreateTab(entity); // tu método actual
+  } else {
+    _openCreateTabMaster(entity, metadata); // ya lo tenés para master
+  }
+}
+
+
 
 /*
   void _openEditTab(
