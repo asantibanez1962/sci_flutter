@@ -6,6 +6,7 @@ class LookupAutocomplete extends StatefulWidget {
   final int? value;
   final Function(int?) onChanged;
   final bool isModified;
+  final bool enabled;
 
   // ⭐ Parámetros para densidad visual
   final double fontSize;
@@ -17,6 +18,7 @@ class LookupAutocomplete extends StatefulWidget {
     required this.lookupMap,
     required this.value,
     required this.onChanged,
+    this.enabled = true,
     this.isModified = false,
     this.fontSize = 13,
     this.padding = const EdgeInsets.symmetric(horizontal: 8, vertical: 8),

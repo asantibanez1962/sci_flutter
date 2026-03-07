@@ -15,6 +15,8 @@ class DynamicFormController {
 
   bool lookupsLoaded = false;
   late Map<String, dynamic> originalData;
+  late final int recordId;
+  late String? rowVersion;
 
   DynamicFormController({
     required this.api,
@@ -22,7 +24,8 @@ class DynamicFormController {
     required Map<String, dynamic>? initialData,
   }) {
     originalData = Map<String, dynamic>.from(initialData ?? {});
-
+    rowVersion = initialData?["rowVersion"];
+    recordId = initialData?[entity.primaryKey] ?? 0;
     for (var field in entity.fields) {
       final name = field.name;
 
@@ -34,6 +37,7 @@ class DynamicFormController {
 
       formData[name] = initialData?[name];
     }
+   
   }
 
   bool _needsController(FieldDefinition f) {
@@ -48,11 +52,13 @@ Future<void> loadRecord() async {
 
   if (id == null) return;
 
-  print(">>> Cargando registro real desde backend: ${entity.name} WHERE $pk = $id");
+  //print(">>> Cargando registro real desde backend: ${entity.name} WHERE $pk = $id");
 
   final fresh = await api.getById(entity.name, id);
 
   originalData = Map<String, dynamic>.from(fresh);
+ // ⭐ Actualizar RowVersion
+  rowVersion = fresh["rowVersion"];
 
   for (var f in entity.fields) {
     final name = f.name;
@@ -108,18 +114,47 @@ Future<void> loadRecord() async {
     return false;
   }
 
-  Future<void> save() async {
-    syncControllersToFormData();
+Future<Map<String, dynamic>> save() async {
+  syncControllersToFormData();
 
-    final pk = entity.primaryKey;
-    final id = originalData[pk];
+  final pk = entity.primaryKey;
+  final id = originalData[pk];
 
-    await api.saveData(
-      entity.name,
-      formData,
-      id: id,
-    );
+  // ⭐ Incluir RowVersion en el payload
+  formData["rowVersion"] = rowVersion;
 
+  // ⭐ Llamar al backend
+  final result = await api.saveData(
+    entity.name,
+    formData,
+    id: id,
+  );
+
+  // ⭐ Conflicto de concurrencia
+  if (result["conflict"] == true) {
+    return {
+      "success": false,
+      "conflict": true,
+      "currentRowVersion": result["currentRowVersion"],
+    };
+  }
+
+  // ⭐ Guardado exitoso → actualizar RowVersion
+  if (result["success"] == true) {
+    rowVersion = result["rowVersion"];
     originalData = Map<String, dynamic>.from(formData);
   }
+
+  return {
+    "success": true,
+    "conflict": false,
+  };
+}
+void markAllClean() {
+  // Copiar el estado actual como el nuevo estado original
+  originalData = Map<String, dynamic>.from(formData);
+
+  // Si usás RowVersion, asegurate de mantenerla
+  // (ya debería estar actualizada después del save)
+}
 }

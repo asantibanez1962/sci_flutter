@@ -5,12 +5,14 @@ class BooleanField extends StatelessWidget {
   final bool value;
   final bool modified;
   final ValueChanged<bool> onChanged;
+   final bool enabled;  
 
   const BooleanField({
     super.key,
     required this.label,
     required this.value,
     required this.modified,
+    this.enabled = true, // Valor por defecto para enabled
     required this.onChanged,
   });
 
@@ -45,7 +47,7 @@ class BooleanField extends StatelessWidget {
             scale: 0.75,
             child: Switch(
               value: value,
-              onChanged: onChanged,
+              onChanged: enabled ? onChanged : null, // Deshabilita el switch si enabled es false
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),

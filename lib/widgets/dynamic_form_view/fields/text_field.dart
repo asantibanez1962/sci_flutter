@@ -5,6 +5,7 @@ class TextFieldWidget extends StatelessWidget {
   final TextEditingController controller;
   final bool modified;
   final String? errorText;
+  final bool enabled;                
   final ValueChanged<String> onChanged;
 
   const TextFieldWidget({
@@ -12,6 +13,7 @@ class TextFieldWidget extends StatelessWidget {
     required this.label,
     required this.controller,
     required this.modified,
+    required this.enabled,
     required this.onChanged,
     this.errorText,
   });
@@ -20,6 +22,7 @@ class TextFieldWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
+      enabled: enabled,
       style: const TextStyle(fontSize: 13), // ⭐ Texto compacto
       decoration: InputDecoration(
         isDense: true, // ⭐ Reduce altura del TextField

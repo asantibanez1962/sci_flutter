@@ -2,10 +2,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/entity_definition.dart';
 import '../models/form_metadata.dart';
-//import 'package:flutter/foundation.dart';
+import '../models/lock_result.dart';
+import '../models/lock_status.dart';
+import '../models/save_result.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiClient {
   final String baseUrl;
+  final String userId = "dev-user"; // o "alfredo", o un GUID fijo
 
   ApiClient({required this.baseUrl});
 
@@ -166,18 +170,11 @@ Future<Map<String, dynamic>> saveData(
   }
 }//savedata
 
-/* se quita para agregar 
-  Future<Map<String, dynamic>> getById(String entity, dynamic id) async {
-    final url = Uri.parse('$baseUrl/data/$entity/$id');
 
-    final response = await http.get(url);
-
-    if (response.statusCode != 200) {
-      throw Exception("Error al obtener $entity con ID $id");
-    }
-
-    return jsonDecode(response.body) as Map<String, dynamic>;
-  }*/
+Future<SaveResult> saveRecord(String entity, Map<String, dynamic> data, {int? id}) async {
+  final raw = await saveData(entity, data, id: id);
+  return SaveResult.fromJson(raw);
+}
 
 Future<Map<String, dynamic>> getById(String entity, dynamic id) async {
   final url = Uri.parse("$baseUrl/data/$entity/$id");
@@ -296,6 +293,134 @@ Future<void> logUiEvent({
     headers: {"Content-Type": "application/json"},
     body: jsonEncode(body),
   );
+}
+
+  // -----------------------------------------
+  // ACQUIRE LOCK
+  // -----------------------------------------
+Future<LockResult> lockRecord(String entity, int id, String sessionId) async {
+  final url = Uri.parse('$baseUrl/api/lock/$entity/$id/acquire');
+  print(">>> URL: $url");
+
+  print(">>> LOCK REQUEST: entity=$entity id=$id userId=$userId sessionId=$sessionId");
+
+  final response = await http.post(
+    url,
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'userId': userId,
+      'sessionId': sessionId,   // ⭐ NUEVO
+    }),
+  );
+
+  if (response.body.isEmpty) {
+    return LockResult(
+      success: false,
+      conflict: true,
+      message: "Respuesta vacía del servidor",
+      lockedBy: null,
+      lockedAt: null,
+    );
+  }
+
+  final json = jsonDecode(response.body);
+
+  if (response.statusCode == 409) {
+    return LockResult(
+      success: false,
+      conflict: true,
+      message: json["message"],
+      lockedBy: json["lockedBy"],
+      lockedAt: json["lockedAt"] != null
+          ? DateTime.parse(json["lockedAt"])
+          : null,
+    );
+  }
+
+  if (response.statusCode == 400) {
+    return LockResult(
+      success: false,
+      conflict: false,
+      message: json["message"],
+      lockedBy: null,
+      lockedAt: null,
+    );
+  }
+
+  return LockResult(
+    success: true,
+    conflict: false,
+    message: null,
+    lockedBy: null,
+    lockedAt: null,
+  );
+}
+  // -----------------------------------------
+  // REFRESH LOCK
+  // -----------------------------------------
+Future<bool> refreshLock(String entity, int id, String sessionId) async {
+  final url = Uri.parse('$baseUrl/api/lock/$entity/$id/refresh');
+
+  final response = await http.post(
+    url,
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'userId': userId,
+      'sessionId': sessionId,   // ⭐ NUEVO
+    }),
+  );
+
+  if (response.body.isEmpty) {
+    debugPrint("⚠️ refreshLock(): respuesta vacía del servidor");
+    return false;
+  }
+
+  final json = jsonDecode(response.body);
+
+  if (response.statusCode == 409) {
+    debugPrint("⚠️ refreshLock(): conflicto → ${json["message"]}");
+    return false;
+  }
+
+  if (response.statusCode == 400) {
+    debugPrint("⚠️ refreshLock(): error → ${json["message"]}");
+    return false;
+  }
+
+  return true;
+}
+
+// -----------------------------------------
+  // RELEASE LOCK
+  // -----------------------------------------
+Future<void> releaseLock(String entity, int id, String sessionId) async {
+  final url = Uri.parse('$baseUrl/api/lock/$entity/$id/release');
+print("🔥 RELEASE LOCK ejecutado desde dispose()");
+  final response = await http.post(
+    url,
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'userId': userId,
+      'sessionId': sessionId,   // ⭐ NUEVO
+    }),
+  );
+
+  if (response.statusCode != 200) {
+    debugPrint("⚠️ releaseLock(): error → ${response.body}");
+  }
+}
+
+Future<LockStatus> getLockStatus(String entity, int id) async {
+  final url = Uri.parse("$baseUrl/api/lock/$entity/$id/status");
+
+  final response = await http.get(url);
+
+  if (response.statusCode != 200) {
+    throw Exception("Error al consultar estado del lock");
+  }
+
+  final data = jsonDecode(response.body);
+  return LockStatus.fromJson(data);
 }
 
 }

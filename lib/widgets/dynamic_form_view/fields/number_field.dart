@@ -7,6 +7,7 @@ class NumberFieldWidget extends StatelessWidget {
   final bool modified;
   final String? errorText;
   final ValueChanged<double?> onChanged;
+  final bool enabled;
 
   const NumberFieldWidget({
     super.key,
@@ -14,6 +15,7 @@ class NumberFieldWidget extends StatelessWidget {
     required this.controller,
     required this.modified,
     required this.onChanged,
+    this.enabled = true,
     this.errorText,
   });
 
@@ -21,6 +23,7 @@ class NumberFieldWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
+      enabled: enabled,
       style: const TextStyle(fontSize: 13), // ⭐ Texto compacto
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
 
@@ -61,10 +64,11 @@ class NumberFieldWidget extends StatelessWidget {
         FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
       ],
 
-      onChanged: (v) {
+      onChanged: enabled ? (v) {
         final parsed = double.tryParse(v.replaceAll(",", "."));
         onChanged(parsed);
-      },
+        } 
+      : (_) {}, // Si no está habilitado, no hace nada
     );
   }
 }

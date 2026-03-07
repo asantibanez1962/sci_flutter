@@ -14,6 +14,7 @@ class LookupFieldBuilder {
     required bool isModified,
     required void Function(dynamic) onChanged,
     required Future<List<Map<String, dynamic>>> Function() loadDialogRows,
+     bool enabled = true,
   }) {
     // ⭐ Lookup con diálogo (compacto)
     if (field.dataType == "lookup" && field.lookupDisplayFields != null) {
@@ -25,6 +26,7 @@ class LookupFieldBuilder {
                 text: lookupMap[value] ?? "",
               ),
               readOnly: true,
+              enabled: enabled,
               style: const TextStyle(fontSize: 13),
               decoration: InputDecoration(
                 isDense: true,
@@ -50,7 +52,7 @@ class LookupFieldBuilder {
               minWidth: 32,
               minHeight: 32,
             ),
-            onPressed: () async {
+            onPressed: enabled ? () async {
               final rows = await loadDialogRows();
 
               final selected = await showDialog(
@@ -65,7 +67,7 @@ class LookupFieldBuilder {
               if (selected != null) {
                 onChanged(selected["id"]);
               }
-            },
+            }:null,
           ),
         ],
       );
@@ -78,7 +80,11 @@ class LookupFieldBuilder {
         lookupMap: lookupMap,
         value: value as int?,
         isModified: isModified,
-        onChanged: (v) => onChanged(v),
+        enabled: enabled,                   
+        onChanged: enabled
+          ? (v) => onChanged(v)
+          : (_) {},
+
         fontSize: 13,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       );
@@ -115,7 +121,7 @@ class LookupFieldBuilder {
               ),
             )
             .toList(),
-        onChanged: (v) => onChanged(v),
+        onChanged: enabled ? (v) => onChanged(v) : null,
       );
     }
 

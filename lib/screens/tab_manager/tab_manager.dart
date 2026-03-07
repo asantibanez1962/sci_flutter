@@ -226,19 +226,6 @@ void _openEditTab(EntityDefinition entity, Map<String, dynamic> row) {
 
   // helper central para recrear controller
   void _rebuildController({int? targetIndex}) {
-    /*se quita para probar bitacora doble
-    final oldIndex = controller.index;
-
-    controller.dispose();
-    controller = TabController(length: tabs.length, vsync: this);
-
-    if (targetIndex != null) {
-      controller.index = targetIndex.clamp(0, tabs.length - 1);
-    } else {
-      controller.index = oldIndex.clamp(0, tabs.length - 1);
-    }
-
-    setState(() {}); */
  
   final old = controller;
 
@@ -272,42 +259,7 @@ void _openEditTab(EntityDefinition entity, Map<String, dynamic> row) {
 }
   
 
-  
-/*
-  Future<void> _restoreTabFromId(String id) async {
-    if (id == "entities") return;
 
-    if (id.startsWith("list_")) {
-      final entityName = id.substring(5);
-      final entity = widget.entities.firstWhere((e) => e.name == entityName);
-      _openEntityTab(entity, save: false);
-      return;
-    }
-
-    if (id.startsWith("create_")) {
-      final entityName = id.substring(7);
-      final entity = widget.entities.firstWhere((e) => e.name == entityName);
-      _openCreateTab(entity, save: false);
-      return;
-    }
-
-    if (id.startsWith("edit_")) {
-      final parts = id.split("_");
-      if (parts.length < 3) return;
-
-      final entityName = parts[1];
-      final recordId = parts[2];
-
-      final entity = widget.entities.firstWhere((e) => e.name == entityName);
-      final parsedId = int.tryParse(recordId) ?? recordId;
-
-      final row = await widget.api.getById(entity.name, parsedId);
-
-      _openEditTab(entity, row, save: false);
-      return;
-    }
-  }
-*/
   // ----------------- ABRIR PESTAÑAS -----------------
 void _openEntityTab(EntityDefinition entity, {bool save = true}) async {
     final fullEntity = await widget.api.getEntityMetadata(entity.name);
@@ -367,65 +319,6 @@ Future<void> openFormForCreate(EntityDefinition entity) async {
   }
 }
 
-
-
-/*
-  void _openEditTab(
-  EntityDefinition entity,
-  Map<String, dynamic> row, {
-  bool save = true,
-}) {
-  openFormForEdit(entity, row);
-}
-*/
-
-/*
-    void _openEditTab(
-    EntityDefinition entity,
-    Map<String, dynamic> row, {
-    bool save = true,
-  }) {
-
-    final tabId = "edit_${entity.name}_${row[entity.primaryKey]}";
-    final previousTabIndex = controller.index;
-    final formKey = GlobalKey<DynamicFormViewState>();
-
-    tabs.add(
-      TabItem(
-        id: tabId,
-        title: "Editar ${entity.displayName}",
-        icon: tabIcon(TabType.edit),
-        color: tabColor(TabType.edit),
-        closable: true,
-        formKey: formKey,
-        view: TabViewWrapper( 
-          child:DynamicFormView(
-              key: formKey,
-              api: widget.api,
-              entity: entity,
-              initialData: row,
-              onClose: () async {
-                final ok = await formKey.currentState?.attemptClose() ?? true;
-                if (!ok) return;
-                final editIndex = tabs.indexWhere((t) => t.id == tabId);
-                if (editIndex != -1) {
-                  _closeTab(editIndex);
-                }
-                controller.index = previousTabIndex;
-                setState(() {});
-                }
-             ),
-            ),
-          ),
-    );
-    if (!_restoring) {
-      _rebuildController(targetIndex: tabs.length - 1);
-      if (save) _saveTabs();
-    }
-
-  }
-*/
-
   void _openCreateTab(EntityDefinition entity, {bool save = true}) {
     final tabId = "create_${entity.name}";
 
@@ -467,39 +360,31 @@ Future<void> openFormForCreate(EntityDefinition entity) async {
     }
   }
 
-  // ----------------- CERRAR PESTAÑAS -----------------
-/* se quitar por error luego de bitacora doble
-  void _closeTab(int index) {
-
-    if (index < 0 || index >= tabs.length) return;
-    if (!tabs[index].closable) return;
-
-    final oldIndex = controller.index;
-
-    tabs.removeAt(index);
-
-    if (!_restoring) {
-      int targetIndex;
-      if (tabs.isEmpty) {
-        targetIndex = 0;
-      } else if (oldIndex >= tabs.length) {
-        targetIndex = tabs.length - 1;
-      } else {
-        targetIndex = oldIndex;
-      }
-
-      _rebuildController(targetIndex: targetIndex);
-      _saveTabs();
-    }
-
- //   print("Tabs after close: ${tabs.map((t) => t.id).toList()}");
- //   print("Controller index after close = ${controller.index}");
-  }
-*/
-
-void _closeTab(int index) {
+void _closeTab(int index) async {
   if (index < 0 || index >= tabs.length) return;
   if (!tabs[index].closable) return;
+
+  final tab=tabs[index];
+
+// 1. Intentar cerrar el formulario (validaciones, cambios sin guardar)
+  if (tab.formKey != null) {
+    final state = tab.formKey!.currentState;
+    if (state != null) {
+      final canClose = await state.attemptClose();
+      if (!canClose) return; // ❌ No cerrar
+    }
+  }
+
+  // 2. Liberar lock si corresponde
+  if (tab.formKey != null) {
+    final state = tab.formKey!.currentState;
+    if (state != null && state.hasLock) {
+      await state.releaseLock();
+      state.hasLock = false;
+    }
+  }
+
+  // 3. Ahora sí eliminar la pestaña
 
   final oldIndex = controller.index;
 
@@ -523,7 +408,8 @@ void _closeTab(int index) {
     _rebuildController(targetIndex: targetIndex);
     _saveTabs();
   }
-}
+  }
+
   void _saveTabs() {
     TabPersistence.saveTabs(tabs);
   }

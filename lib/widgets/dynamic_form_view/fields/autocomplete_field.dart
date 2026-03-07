@@ -5,6 +5,7 @@ class AutocompleteFieldWidget extends StatelessWidget {
   final List<Map<String, dynamic>> options;
   final bool modified;
   final ValueChanged<dynamic> onChanged;
+  final bool enabled;
 
   const AutocompleteFieldWidget({
     super.key,
@@ -12,6 +13,7 @@ class AutocompleteFieldWidget extends StatelessWidget {
     required this.options,
     required this.modified,
     required this.onChanged,
+    this.enabled = true,
   });
 
   @override
@@ -20,6 +22,7 @@ class AutocompleteFieldWidget extends StatelessWidget {
       displayStringForOption: (opt) => opt["label"],
 
       optionsBuilder: (text) {
+        if (!enabled) return const Iterable.empty(); 
         if (text.text.isEmpty) return const Iterable.empty();
         return options.where(
           (opt) => opt["label"]
@@ -28,12 +31,15 @@ class AutocompleteFieldWidget extends StatelessWidget {
         );
       },
 
-      onSelected: (opt) => onChanged(opt["value"]),
+        onSelected: enabled
+          ? (opt) => onChanged(opt["value"])
+          : (_) {},
 
       fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
         return TextFormField(
           controller: textController,
           focusNode: focusNode,
+           enabled: enabled,  
           style: const TextStyle(fontSize: 13), // ⭐ Texto compacto
 
           decoration: InputDecoration(
