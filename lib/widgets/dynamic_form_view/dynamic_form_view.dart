@@ -25,6 +25,7 @@ class DynamicFormView extends StatefulWidget {
   final Future<void> Function() onClose;
   final Future<bool> Function()? onRequestClose;
   final List<String>? visibleFields;
+  final bool showInternalBackButton;
 
   const DynamicFormView({
     super.key,
@@ -34,6 +35,7 @@ class DynamicFormView extends StatefulWidget {
     required this.onClose,
     this.onRequestClose,
     this.visibleFields,
+    this.showInternalBackButton = true, // por defecto TRUE
 
   });
 
@@ -86,6 +88,7 @@ class DynamicFormViewState extends State<DynamicFormView> with FormEditingMixin,
 
 @override
 Future<LockResult> acquireLock() async {
+ // print(">>> from simple: acquireLock() llamado");
   final result = await widget.api.lockRecord(entityName, recordId, sessionId);
 
   return LockResult(
@@ -102,8 +105,17 @@ Future<LockStatus> fetchLockStatus() async {
 }
 
 
+  //@override
+  //Future<void> releaseLock() => widget.api.releaseLock(entityName, recordId, sessionId);
   @override
-  Future<void> releaseLock() => widget.api.releaseLock(entityName, recordId, sessionId);
+Future<void> releaseLock() async {
+  //print("FORMVIEW: releaseLock() llamado");
+  //print("FORMVIEW: entity=$entityName, record=$recordId, session=$sessionId");
+
+  await widget.api.releaseLock(entityName, recordId, sessionId);
+
+//  print("FORMVIEW: releaseLock() completado");
+}
 
   @override
   Future<void> refreshLock() => widget.api.refreshLock(entityName, recordId, sessionId);
@@ -124,6 +136,7 @@ Widget build(BuildContext context) {
     },
     child: Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         toolbarHeight: 42,
         titleTextStyle: const TextStyle(
           fontSize: 14,
@@ -338,7 +351,18 @@ if (field.fieldType == "number") {
   return Text("Tipo no soportado: ${field.fieldType}");
 
   }
+Future<bool> handleExternalClose() async {
+  final ok = await attemptClose();
+  if (!ok) return false;
 
+  if (hasLock) {
+  //  print("FORMVIEW: handleExternalClose() → liberando lock");
+    await releaseLock();
+  }
+
+  //await widget.onClose();
+  return true;
+}
 /*
 void _showLockedPopup(String lockedBy, DateTime? lockedAt) {
   showDialog(

@@ -39,7 +39,7 @@ mixin FormEditingMixin<T extends StatefulWidget> on State<T> {
       lockedBy = result.lockedBy;
       lockedAt = result.lockedAt;
 
-      print("🔒 startEditing → NO se adquirió lock (hasLock=false)");
+    //  print("🔒 startEditing → NO se adquirió lock (hasLock=false)");
 
       // Mostrar popup compacto
       if (lockedBy != null) {
@@ -54,7 +54,7 @@ mixin FormEditingMixin<T extends StatefulWidget> on State<T> {
     lockedBy = null;
     lockedAt = null;
 
-    print("🔓 startEditing → Lock adquirido correctamente (hasLock=true)");
+  //  print("🔓 startEditing → Lock adquirido correctamente (hasLock=true)");
 
     setState(() {
       mode = FormMode.edit;
@@ -67,8 +67,14 @@ mixin FormEditingMixin<T extends StatefulWidget> on State<T> {
   // CANCEL EDITING
   // -----------------------------------------
   Future<void> cancelEditing() async {
+   //  print("MIXIN: cancelEditing() llamado");
+
     if (hasLock) {
+   //       print("MIXIN: tiene lock, llamando releaseLock()");
+
       await releaseLock();
+  //     print("MIXIN: releaseLock() terminó");
+
       hasLock = false;
     }
 
@@ -111,6 +117,7 @@ mixin FormEditingMixin<T extends StatefulWidget> on State<T> {
 
   @override
   void dispose() {
+   // print(">>> MIXIN: dispose() llamado");
     lockRefreshTimer?.cancel();
     super.dispose();
   }
@@ -127,12 +134,12 @@ mixin FormEditingMixin<T extends StatefulWidget> on State<T> {
         lockedAt = status.lockedAt;
         hasLock = false;
 
-        print("🔒 Registro YA estaba bloqueado por $lockedBy");
+     //   print("🔒 Registro YA estaba bloqueado por $lockedBy");
 
         setState(() {});
       }
     } catch (e) {
-      print("⚠ Error consultando lock: $e");
+   //   print("⚠ Error consultando lock: $e");
     }
   }
 

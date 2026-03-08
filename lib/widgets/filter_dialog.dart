@@ -259,7 +259,7 @@ class _FilterDialogState extends State<FilterDialog> {
 
   void _applyFilters() {
     for (final c in conditions) {
-      print("Validando condición: operator=${c.operator} | value=${c.value} | value2=${c.value2}");
+     // print("Validando condición: operator=${c.operator} | value=${c.value} | value2=${c.value2}");
       if (widget.fieldType == "date") {
         if (c.operator == "between") {
           if (c.value == null || c.value!.isEmpty || c.value2 == null || c.value2!.isEmpty) {
@@ -294,7 +294,7 @@ class _FilterDialogState extends State<FilterDialog> {
 Widget _buildLookupEditor(int index) {
   final map = widget.lookupMap ?? {};
   final entries = map.entries.toList();
-print("Construyendo editor lookup para ${widget.field} con ${entries.length} opciones");
+//print("Construyendo editor lookup para ${widget.field} con ${entries.length} opciones");
 
   return Autocomplete<MapEntry<int, String>>(
     displayStringForOption: (opt) => opt.value,

@@ -66,10 +66,9 @@ Future<EntityDefinition> getEntityMetadata(String entityName) async {
   // ---------------------------------------------
   if (filters == null || filters.isEmpty) {
     final url = Uri.parse('$baseUrl/data/$entity');
-    //debugPrint("URL llamada (GET): $url");
 
     final res = await http.get(url);
-    //debugPrint("Respuesta backend (GET): ${res.body}");
+    debugPrint("Respuesta backend (GET): ${res.body}");
 
     final List<dynamic> data = jsonDecode(res.body);
 
@@ -89,9 +88,10 @@ Future<EntityDefinition> getEntityMetadata(String entityName) async {
   // 2) POST /filter (con filtros)
   // ---------------------------------------------
   final url = Uri.parse('$baseUrl/data/$entity/filter');
+   debugPrint("URL llamada (GET): $url  $entity");
 
-  //debugPrint("URL llamada (POST FILTER): $url");
-  //debugPrint("Body enviado: ${jsonEncode({"filters": filters})}");
+  debugPrint("URL llamada (POST FILTER): $url");
+  debugPrint("Body enviado: ${jsonEncode({"filters": filters})}");
 
   final res = await http.post(
     url,
@@ -99,7 +99,7 @@ Future<EntityDefinition> getEntityMetadata(String entityName) async {
     body: jsonEncode({"filters": filters}),
   );
 
-  //debugPrint("Respuesta backend (FILTER): ${res.body}");
+  debugPrint("Respuesta backend (FILTER): ${res.body}");
 
   final List<dynamic> data = jsonDecode(res.body);
 
@@ -300,9 +300,9 @@ Future<void> logUiEvent({
   // -----------------------------------------
 Future<LockResult> lockRecord(String entity, int id, String sessionId) async {
   final url = Uri.parse('$baseUrl/api/lock/$entity/$id/acquire');
-  print(">>> URL: $url");
+  //print(">>> URL: $url");
 
-  print(">>> LOCK REQUEST: entity=$entity id=$id userId=$userId sessionId=$sessionId");
+  //print(">>> LOCK REQUEST: entity=$entity id=$id userId=$userId sessionId=$sessionId");
 
   final response = await http.post(
     url,
@@ -395,7 +395,7 @@ Future<bool> refreshLock(String entity, int id, String sessionId) async {
   // -----------------------------------------
 Future<void> releaseLock(String entity, int id, String sessionId) async {
   final url = Uri.parse('$baseUrl/api/lock/$entity/$id/release');
-print("🔥 RELEASE LOCK ejecutado desde dispose()");
+//print("🔥 RELEASE LOCK ejecutado desde dispose()");
   final response = await http.post(
     url,
     headers: {'Content-Type': 'application/json'},

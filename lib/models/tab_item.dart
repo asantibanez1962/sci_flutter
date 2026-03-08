@@ -9,6 +9,7 @@ class TabItem {
   final bool closable;
 
   final GlobalKey<DynamicFormViewState>? formKey;
+ final Future<bool> Function()? onRequestClose;
 
   TabItem({
     required this.id,
@@ -18,5 +19,6 @@ class TabItem {
     required this.color,
     this.closable = true,
     this.formKey, // ⭐ ahora sí inicializado
+    this.onRequestClose,
   });
 }

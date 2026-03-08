@@ -10,7 +10,8 @@ import 'tab_type.dart';
 import 'tab_colors.dart';
 import '../../services/tab_persistence.dart';
 import 'tab_view_wrapper.dart';
-import '../../widgets/dynamic_form_view_master/dynamicformviewmaster.dart';
+//import '../../widgets/dynamic_form_view_master/dynamicformviewmaster.dart';
+import '../../widgets/dynamic_form_view_master_locking.dart';
 import '../../models/form_metadata.dart';
 
 class TabManager extends StatefulWidget {
@@ -57,7 +58,7 @@ void _openCreateTabMaster(
       color: tabColor(TabType.create),
       closable: true,
       view: TabViewWrapper(
-        child: DynamicFormViewMaster(
+        child: DynamicFormViewMasterDetailLocking(
           metadata: metadata,
           data: emptyData,          // 👈 aquí NO puede ir null
           api: widget.api,
@@ -150,7 +151,9 @@ void _openEditTabMaster(
 ) {
   final tabId = "edit_${entity.name}_${row[entity.primaryKey]}";
   final previousTabIndex = controller.index;
+  final masterKey = GlobalKey<DynamicFormViewMasterDetailLockingState>();
 
+ //print("openedit");
   tabs.add(
     TabItem(
       id: tabId,
@@ -158,19 +161,36 @@ void _openEditTabMaster(
       icon: tabIcon(TabType.edit),
       color: tabColor(TabType.edit),
       closable: true,
+       // ⭐⭐ ESTA ES LA PIEZA QUE FALTABA ⭐⭐
+onRequestClose: () async {
+  //print("TABMANAGER → MASTERDETAIL: onRequestClose()");
+ //print(masterKey.currentState);
+   final state = masterKey.currentState;
+//print("despues");
+  if (state == null) {
+  //  print("MASTERDETAIL: currentState == null → no puedo reenviar cierre");
+    return true; // permitir cerrar sin bloquear
+  }
+
+  return await state.handleRequestClose();
+},
+
       view: TabViewWrapper(
-        child: DynamicFormViewMaster(
+        child: DynamicFormViewMasterDetailLocking(
+          key: masterKey,
           metadata: metadata,
           data: row,
           api: widget.api,
           entity: entity,
           entityMap: entityMap, // mapa de entidades hijas
           onClose: () async {
+             //print("openedit3 ");
             final editIndex = tabs.indexWhere((t) => t.id == tabId);
             if (editIndex != -1) _closeTab(editIndex);
             controller.index = previousTabIndex;
             setState(() {});
           },
+          
         ),
       ),
     ),
@@ -359,7 +379,7 @@ Future<void> openFormForCreate(EntityDefinition entity) async {
       if (save) _saveTabs();
     }
   }
-
+/*old
 void _closeTab(int index) async {
   if (index < 0 || index >= tabs.length) return;
   if (!tabs[index].closable) return;
@@ -409,16 +429,64 @@ void _closeTab(int index) async {
     _saveTabs();
   }
   }
-
+*/
   void _saveTabs() {
     TabPersistence.saveTabs(tabs);
   }
 
 
+void _closeTab(int index) async {
+  if (index < 0 || index >= tabs.length) return;
+  if (!tabs[index].closable) return;
+
+  final tab = tabs[index];
+
+  // 1) Si el tab tiene onRequestClose (MasterDetail, u otros)
+  if (tab.onRequestClose != null) {
+    final ok = await tab.onRequestClose!();
+    if (!ok) return;
+  }
+
+  // 2) Si es un formulario simple con formKey
+  if (tab.formKey != null) {
+    final state = tab.formKey!.currentState;
+    if (state != null) {
+      final canClose = await state.attemptClose();
+      if (!canClose) return;
+
+      if (state.hasLock) {
+        await state.releaseLock();
+        state.hasLock = false;
+      }
+    }
+  }
+
+  // 3) Eliminar la pestaña y reajustar controller
+  final oldIndex = controller.index;
+
+  tabs.removeAt(index);
+
+  if (!_restoring) {
+    int targetIndex;
+
+    if (tabs.isEmpty) {
+      targetIndex = 0;
+    } else if (oldIndex >= tabs.length) {
+      targetIndex = tabs.length - 1;
+    } else if (oldIndex == index) {
+      targetIndex = (index - 1).clamp(0, tabs.length - 1);
+    } else {
+      targetIndex = oldIndex;
+    }
+
+    _rebuildController(targetIndex: targetIndex);
+    _saveTabs();
+  }
+}
 
 @override
 Widget build(BuildContext context) {
- print(">>> TabManager.build() ejecutado. Tabs abiertas: ${tabs.map((t) => t.id).toList()}");
+ //print(">>> TabManager.build() ejecutado. Tabs abiertas: ${tabs.map((t) => t.id).toList()}");
   return Scaffold(
     appBar: AppBar(
       title: const Text("ERP Dinámico"),

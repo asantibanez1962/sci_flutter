@@ -54,8 +54,8 @@ class DynamicListController {
 
 Future<void> _loadData() async {
   try {
-    print("Cargando datos de entidad: ${state.widget.entity.name}");
-//print("Filtros aplicados: ${state.widget.parentFilter}");
+ //   print("Cargando datos de entidad: ${state.widget.entity.name}");
+////print("Filtros aplicados: ${state.widget.parentFilter}");
 
     // 1) Filtros de columnas
     final columnFiltersJson =  columnFilters.values.map((f) => f.toJson()).toList();
@@ -96,20 +96,20 @@ relationFilters.add({
     metadataFields = rawColumns
         .map<FieldDefinition>((e) => FieldDefinition.fromJson(e))
         .toList();
-
-  /*      print("=== METADATA FIELDS ===");
+/*
+      print("=== METADATA FIELDS ===${state.widget.entity.name}");
 for (var f in metadataFields) {
   print("FIELD: ${f.name} | type=${f.dataType} | fieldType=${f.fieldType} | lookupEntity=${f.lookupEntity}");
 }
-print("========================");*/
-
+print("========================");
+*/
 
     // 4) Datos
   rows = await state.widget.api.getList(
     state.widget.entity.name,
     filters: allFilters.isEmpty ? null : allFilters,
   );
- // print("4.1");
+  //print("4.1");
     // 5) Columnas
     columns = metadataFields.map((f) {
       return ColumnDefinition(
@@ -119,8 +119,8 @@ print("========================");*/
         fieldType: f.dataType, //f.fieldType,
       );
     }).toList();
-
-    /*    print("=== columns FIELDS ===");
+/*
+        print("=== columns FIELDS ===");
 for (var f in columns) {
   print("FIELD: ${f.field} | type=${f.fieldType} | visible=${f.visible}");
 }
@@ -134,13 +134,13 @@ if (hiddenColumns.isNotEmpty) {
     }
   }
 }
-
-//print("Cargando datos de entidad 2: ${state.widget.entity.name}");
-//print("Filtros aplicados: ${state.widget.parentFilter}");
-//print("antes de load lookups");
+/*
+print("Cargando datos de entidad 2: ${state.widget.entity.name}");
+print("Filtros aplicados: ${state.widget.parentFilter}");
+print("antes de load lookups");*/
 
     await loadLookups();
-    //print("antes de load column visibility");
+ //   print("antes de load column visibility");
    // await _loadColumnVisibility();  se quita para evitar grabar 2 veces bitacora al inicio
 
     if (!isDisposed && state.mounted) {
@@ -193,7 +193,7 @@ Future<void> applyFilter(ColumnFilter filter) async {
     ...relationFilters,
     ...columnFiltersJson,
   ];
-print("Filtros ALL APPLY: $allFilters");
+//print("Filtros ALL APPLY: $allFilters");
   rows = await state.widget.api.getList(
     state.widget.entity.name,
     filters: allFilters.isEmpty ? null : allFilters,
