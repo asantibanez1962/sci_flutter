@@ -150,7 +150,7 @@ void _openEditTabSimple(EntityDefinition entity, Map<String, dynamic> row)
   //final previousTabIndex = controller.index;
 
   final formKey = GlobalKey<DynamicFormViewState>();
-        final controller = DynamicFormController(
+   final controller = DynamicFormController(
           api: widget.api,
           entity: entity,
         initialData: row,
@@ -235,9 +235,53 @@ void _openEditTabMaster(
   FormMetadataMasterData metadata,
 ) {
   final tabId = "edit_${entity.name}_${row[entity.primaryKey]}";
-  final previousTabIndex = controller.index;
+  //final previousTabIndex = controller.index;
 
   final masterKey = GlobalKey<DynamicFormViewMasterDataState>();
+
+   final controller = DynamicFormController(
+          api: widget.api,
+          entity: entity,
+        initialData: row,
+        );
+          // 🔥 CONFIGURAR LOCKING PARA FORMULARIOS SIMPLES
+        controller.entityName = entity.name;
+        controller.recordId = row[entity.primaryKey] ?? 0;
+        controller.sessionId = const Uuid().v4();
+
+        controller.acquireLock = () => widget.api.lockRecord(
+              controller.entityName,
+              controller.recordId!,
+              controller.sessionId,
+            );
+
+        controller.releaseLock = () => widget.api.releaseLock(
+              controller.entityName,
+              controller.recordId!,
+              controller.sessionId,
+            );
+
+        controller.refreshLock = () => widget.api.refreshLock(
+              controller.entityName,
+              controller.recordId!,
+              controller.sessionId,
+            );
+
+        controller.fetchLockStatus = () => widget.api.getLockStatus(
+              controller.entityName,
+              controller.recordId!,
+            );
+
+// intentar adquirir lock (opcional)
+/*
+try {
+  debugPrint('master: intentando acquireLock ${controller.entityName} id=${controller.recordId} session=${controller.sessionId}');
+  await controller.acquireLock?.call();
+  debugPrint('master: acquireLock OK ${controller.entityName} id=${controller.recordId}');
+} catch (e, st) {
+  debugPrint('master: acquireLock falló: $e\n$st');
+}
+*/
 
   tabs.add(
     TabItem(
@@ -245,12 +289,14 @@ void _openEditTabMaster(
       title: "Editar ${entity.displayName}",
       icon: tabIcon(TabType.edit),
       color: tabColor(TabType.edit),
+      // 🔥 ESTE ES EL CAMBIO CRÍTICO
+      controller: controller,
       closable: true,
-      onRequestClose: () async {
+      /*onRequestClose: () async {
         final state = masterKey.currentState;
         if (state == null) return true;
         return await state.handleRequestClose();
-      },
+      },*/
       builder: () {
         // 🔥 Crear controller local (igual que en CREATE y EDIT simple)
         final formController = DynamicFormController(
@@ -267,8 +313,17 @@ void _openEditTabMaster(
             api: widget.api,
             entity: entity,
             entityMap: entityMap,
-            controller: formController,   // ← AHORA SÍ
+            controller: controller,  
             onClose: () async {
+              debugPrint("onclose");
+              // Asegurar liberación del lock antes de cerrar la pestaña
+                try {
+                  await formController.cancelEditing(); // debe liberar lock internamente
+                } catch (e, st) {
+                  debugPrint('Error liberando lock en onClose master: $e\n$st');
+                  // no impedir el cierre por un fallo de liberación, pero loguearlo
+                }
+
               final editIndex = tabs.indexWhere((t) => t.id == tabId);
               if (editIndex != -1) _closeTab(editIndex);
               setState(() {});

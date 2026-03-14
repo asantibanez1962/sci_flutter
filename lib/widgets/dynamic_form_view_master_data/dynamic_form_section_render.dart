@@ -42,7 +42,7 @@ class DynamicFormSectionRenderer extends StatelessWidget {
 
    // ⭐⭐ AQUÍ VA EL BLOQUE QUE PREGUNTASTE ⭐⭐
       if (!availableFieldNames.contains(item.fieldName)) {
-        debugPrint("Skipping unknown field: ${item.fieldName}");
+       // debugPrint("Skipping unknown field: ${item.fieldName}");
         continue;
       }
 

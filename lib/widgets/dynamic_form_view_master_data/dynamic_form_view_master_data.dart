@@ -78,6 +78,15 @@ Future<bool> handleRequestClose() async {
       vsync: this,
     );
     _configureMasterController(); // 👈 AQUÍ
+     // Llamada directa y segura al callback que ya existe
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    try {
+      await widget.controller.acquireLock?.call();
+      debugPrint('Master: acquireLock called for ${widget.controller.entityName}');
+    } catch (e, st) {
+      debugPrint('Master: acquireLock failed: $e\n$st');
+    }
+  });
 
   }
 
@@ -86,7 +95,7 @@ void _configureMasterController() {
 
   // Identidad del registro
   c.entityName = widget.entity.name;
-  //c.recordId = widget.data[widget.entity.primaryKey] ?? 0;
+  c.recordId = widget.data[widget.entity.primaryKey] ?? 0;
   
   // Conexión de locking al backend
   c.acquireLock = () => widget.api.lockRecord(
@@ -111,6 +120,8 @@ void _configureMasterController() {
         c.entityName,
         c.recordId!,
       );
+       debugPrint('Master controller configured: entity=${c.entityName} id=${c.recordId} session=${c.sessionId}');
+
 }
 
   @override
