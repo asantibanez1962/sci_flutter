@@ -153,7 +153,7 @@ class DynamicFormController extends FormEditingController {
   }
 
 bool get hasUnsavedChanges {
-  print("🔎 Revisando cambios…");
+  //print("🔎 Revisando cambios…");
 
   final fieldNames = entity.fields.map((f) => f.name).toSet();
 
@@ -172,14 +172,14 @@ bool get hasUnsavedChanges {
     final nb = (b == null || b == "") ? "" : b;
 
     if (na != nb) {
-      print("⚠️ CAMBIO DETECTADO en '$key'");
-      print("   formData[$key]     = '$na' (${na.runtimeType})");
-      print("   originalData[$key] = '$nb' (${nb.runtimeType})");
+   //   print("⚠️ CAMBIO DETECTADO en '$key'");
+    //  print("   formData[$key]     = '$na' (${na.runtimeType})");
+   //   print("   originalData[$key] = '$nb' (${nb.runtimeType})");
       return true;
     }
   }
 
-  print("✔ Sin cambios");
+  //print("✔ Sin cambios");
   return false;
 } 
  // -----------------------------
@@ -220,8 +220,8 @@ Future<SaveResult> saveToBackend() async {
   }
 
   // 5) debug: ver exactamente lo que vamos a enviar
-  print("🟩 FINAL PAYLOAD = $payload");
-  print("🟥 JSON enviado = ${jsonEncode(payload)}");
+  //print("🟩 FINAL PAYLOAD = $payload");
+  //print("🟥 JSON enviado = ${jsonEncode(payload)}");
 
   // 6) enviar la copia limpia
   final result = await api.saveData(

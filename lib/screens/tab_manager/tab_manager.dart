@@ -50,25 +50,8 @@ late final Map<String, EntityDefinition> entityMap;
  // -------------------------
   // Controllers por pestaña
   // -------------------------
-  final Map<String, DynamicListController> _listControllersByTab = {};
 
 
-DynamicListController _createListControllerForTab(String tabId) {
-  final c = DynamicListController(state: this);
-  // cuando el controller cambie rows, forzamos rebuild del TabManager (y sus vistas)
-  c.onChanged = () {
-    if (mounted) setState(() {});
-  };
-  return c;
-}
-
-DynamicListController _ensureListControllerForTab(String tabId) {
-  return _listControllersByTab.putIfAbsent(tabId, () {
-    final c = _createListControllerForTab(tabId);
-    c.init(); // carga inicial (async) — puedes await si lo necesitas
-    return c;
-  });
-}
 
 void _openCreateTabMaster(
   EntityDefinition entity,
@@ -395,8 +378,6 @@ void _openEntityTab(EntityDefinition entity, {bool save = true}) async {
     entity.fields = fullEntity.fields;
 
     final listId = "list_${entity.name.toLowerCase().trim()}";
-     // crear/obtener controller para esta pestaña
-    final listController = _ensureListControllerForTab(listId);
 
     tabs.add(
       TabItem(
@@ -536,39 +517,39 @@ void _openCreateTab(EntityDefinition entity, {bool save = true}) {
   }
 
 Future<void> _closeTab(int index) async {
-  print("⛳ _closeTab($index) INICIO");
+  //print("⛳ _closeTab($index) INICIO");
 
   if (index < 0 || index >= tabs.length) {
-    print("❌ index fuera de rango");
+ //   print("❌ index fuera de rango");
     return;
   }
 
   final currentTab = tabs[index];
-  print("⛳ currentTab.id = ${currentTab.id}");
+  //print("⛳ currentTab.id = ${currentTab.id}");
 
   // 1) onRequestClose
   if (currentTab.onRequestClose != null) {
-    print("⛳ ejecutando onRequestClose");
+ //   print("⛳ ejecutando onRequestClose");
     final ok = await currentTab.onRequestClose!();
-    print("⛳ onRequestClose devolvió: $ok");
+ //   print("⛳ onRequestClose devolvió: $ok");
     if (!ok) return;
   }
 
   // 3) liberar lock
-  print("⛳ verificando controller en TabItem");
+ // print("⛳ verificando controller en TabItem");
   if (currentTab.controller != null) {
-    print("⛳ controller encontrado, mode = ${currentTab.controller!.mode}");
+ //   print("⛳ controller encontrado, mode = ${currentTab.controller!.mode}");
     if (currentTab.controller!.mode == FormMode.edit) {
-      print("⛳ liberando lock con cancelEditing()");
+  //    print("⛳ liberando lock con cancelEditing()");
       await currentTab.controller!.cancelEditing();
-      print("⛳ lock liberado");
+ //     print("⛳ lock liberado");
     } else {
-      print("⛳ no está en modo edición, no hay lock que liberar");
+  //    print("⛳ no está en modo edición, no hay lock que liberar");
     }
   }
 
   // 4) eliminar pestaña
-  print("⛳ eliminando pestaña");
+  //print("⛳ eliminando pestaña");
 
   final oldIndex = controller.index;
   tabs.removeAt(index);
@@ -592,7 +573,7 @@ Future<void> _closeTab(int index) async {
     _saveTabs();
   }
 
-  print("⛳ _closeTab FIN");
+  //print("⛳ _closeTab FIN");
 }
 
 

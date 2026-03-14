@@ -167,7 +167,7 @@ print("antes de load lookups");*/
 }
 
   Future<void> _loadColumnVisibility() async {
-    //print("entra a visiblity");
+    print("entra a visiblity");
     final prefs =
         await columnApi.getColumnVisibility(state.widget.entity.name);
 
