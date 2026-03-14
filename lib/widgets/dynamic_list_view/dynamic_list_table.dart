@@ -170,23 +170,10 @@ cells: controller.columns
         ),
         child: () {
             final field = col.field;
-            // 1. Valor crudo del row
-            //print("CELL FIELD=$field | raw row value=${row[field]}");
-
-            // 2. Valor camelCase
-            //final camel = field[0].toLowerCase() + field.substring(1);
-            //print("CELL FIELD=$field | camelCase value=${row[camel]}");
-            // 3. LookupMap disponible
-            //print("LOOKUP MAP for $field => ${controller.lookupMaps[field]}");
-            // 2. Intentar camelCase si viene null
             if (value == null) {
               final camel = field[0].toLowerCase() + field.substring(1);
               value = row[camel];
             }
-            // 3. Buscar lookup por el nombre REAL del campo lookup
-              //    Ej: TipoSocio → TipoSocioId
-              //String lookupKey = field;
-              // 4. Si existe lookup, mostrar label
                 String lookupKey = field;
 
               if (controller.lookupMaps.containsKey(lookupKey)) {

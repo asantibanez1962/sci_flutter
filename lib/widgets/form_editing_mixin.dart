@@ -18,7 +18,7 @@ mixin FormEditingMixin<T extends StatefulWidget> on State<T> {
 
   // Métodos que cada formulario debe implementar
   String get entityName;
-  int get recordId;
+  int? get recordId;
   String get sessionId;        
   Future<LockResult> acquireLock();
   Future<void> releaseLock();
@@ -30,6 +30,7 @@ mixin FormEditingMixin<T extends StatefulWidget> on State<T> {
   // START EDITING
   // -----------------------------------------
   Future<void> startEditing() async {
+    debugPrint("entro a star editing en mixing");
     final result = await acquireLock();
 
     if (!result.success) {

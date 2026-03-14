@@ -19,6 +19,8 @@ class DynamicListController {
     List<String>? hiddenColumns,
   }) : hiddenColumns = hiddenColumns ?? [];
 
+  List<Map<String, dynamic>> rows = [];
+  VoidCallback? onChanged; // callback opcional que el State asignará
 
   bool _disposed = false;
 
@@ -26,9 +28,26 @@ class DynamicListController {
     _disposed = true;
   }
 
+// -----------------------
+  // Nuevo: actualizar o insertar un registro
+  // -----------------------
+ void updateOrInsert(Map<String, dynamic> item) {
+    final id = item['id'];
+    final idx = rows.indexWhere((r) => r['id'] == id);
+    if (idx >= 0) rows[idx] = item;
+    else rows.insert(0, item);
+
+    // Notificar al UI vía callback si fue asignado
+    try {
+      onChanged?.call();
+    } catch (_) {}
+  }
+
+
+
+
   bool get isDisposed => _disposed;
 
-  List<Map<String, dynamic>> rows = [];
   List<ColumnDefinition> columns = [];
   Map<String, ColumnFilter> columnFilters = {};
   List<FieldDefinition> metadataFields = [];
@@ -54,14 +73,14 @@ class DynamicListController {
 
 Future<void> _loadData() async {
   try {
- //   print("Cargando datos de entidad: ${state.widget.entity.name}");
-////print("Filtros aplicados: ${state.widget.parentFilter}");
+    //print("Cargando datos de entidad: ${state.widget.entity.name}");
+    //print("Filtros aplicados: ${state.widget.parentFilter}");
 
     // 1) Filtros de columnas
     final columnFiltersJson =  columnFilters.values.map((f) => f.toJson()).toList();
 
-//print("Filtros de columnas: $columnFiltersJson");
-    // 2) Filtros de relación (parentFilter)
+    //print("Filtros de columnas: $columnFiltersJson");
+    //2) Filtros de relación (parentFilter)
     final List<Map<String, dynamic>> relationFilters = [];
     if (state.widget.parentFilter != null) {
       state.widget.parentFilter!.forEach((field, value) {
@@ -119,12 +138,8 @@ print("========================");
         fieldType: f.dataType, //f.fieldType,
       );
     }).toList();
-/*
-        print("=== columns FIELDS ===");
-for (var f in columns) {
-  print("FIELD: ${f.field} | type=${f.fieldType} | visible=${f.visible}");
-}
-print("========================");*/
+
+
 
 // 🔥 Ocultar columnas por código (FK)
 if (hiddenColumns.isNotEmpty) {
@@ -152,6 +167,7 @@ print("antes de load lookups");*/
 }
 
   Future<void> _loadColumnVisibility() async {
+    //print("entra a visiblity");
     final prefs =
         await columnApi.getColumnVisibility(state.widget.entity.name);
 

@@ -4,8 +4,13 @@ import 'package:flutter/material.dart';
 import '../../api/api_client.dart';
 import '../../models/entity_definition.dart';
 import '../../models/field_definition.dart';
+import '../../models/form_mode.dart';
+import '../dynamic_form_view_master_data/form_edition_controller.dart';
+//import '../../models/lock_result.dart';
+import '../../models/save_result.dart';
+import 'package:uuid/uuid.dart';
 
-class DynamicFormController {
+class DynamicFormController extends FormEditingController {
   final ApiClient api;
   final EntityDefinition entity;
 
@@ -15,29 +20,51 @@ class DynamicFormController {
 
   bool lookupsLoaded = false;
   late Map<String, dynamic> originalData;
-  late final int recordId;
-  late String? rowVersion;
 
+  // rowVersion y recordId ya existen en FormEditingController
+  // pero aquí los inicializamos correctamente
   DynamicFormController({
     required this.api,
     required this.entity,
     required Map<String, dynamic>? initialData,
   }) {
-    originalData = Map<String, dynamic>.from(initialData ?? {});
-    rowVersion = initialData?["rowVersion"];
-    recordId = initialData?[entity.primaryKey] ?? 0;
+    sessionId = const Uuid().v4();
+
+    if (initialData == null) {
+      // -----------------------------
+      // CREATE MODE
+      // -----------------------------
+      mode = FormMode.create;
+      originalData = {};
+      formData.clear();
+      recordId = 0;
+      rowVersion = null;
+      formData.remove("rowVersion");
+      formData.remove("RowVersion");
+
+    } else {
+      // -----------------------------
+      // EDIT MODE
+      // -----------------------------
+      mode = FormMode.view;
+      originalData = Map<String, dynamic>.from(initialData);
+      formData.addAll(initialData);
+      recordId = initialData[entity.primaryKey] ?? 0;
+      rowVersion = initialData["rowVersion"];
+    }
+
+    // Crear controllers
     for (var field in entity.fields) {
       final name = field.name;
 
       if (_needsController(field)) {
         controllers[name] = TextEditingController(
-          text: initialData?[name]?.toString() ?? "",
+          text: formData[name]?.toString() ?? "",
         );
       }
 
-      formData[name] = initialData?[name];
+      formData[name] = formData[name];
     }
-   
   }
 
   bool _needsController(FieldDefinition f) {
@@ -46,31 +73,46 @@ class DynamicFormController {
         f.fieldType == "autocomplete";
   }
 
-Future<void> loadRecord() async {
+  // -----------------------------
+  // LOAD RECORD (solo EDIT)
+  // -----------------------------
+ Future<void> loadRecord() async {
   final pk = entity.primaryKey;
   final id = originalData[pk];
 
   if (id == null) return;
 
-  //print(">>> Cargando registro real desde backend: ${entity.name} WHERE $pk = $id");
-
   final fresh = await api.getById(entity.name, id);
 
-  originalData = Map<String, dynamic>.from(fresh);
- // ⭐ Actualizar RowVersion
-  rowVersion = fresh["rowVersion"];
+  // Normalizar originalData
+  originalData = {};
 
   for (var f in entity.fields) {
     final name = f.name;
     final value = fresh[name];
 
-    formData[name] = value;
+    // Normalizar null → ""
+    final normalized = value ?? "";
 
+    // Guardar en originalData
+    originalData[name] = normalized;
+
+    // Guardar en formData
+    formData[name] = normalized;
+
+    // Actualizar controllers
     if (controllers.containsKey(name)) {
-      controllers[name]!.text = value?.toString() ?? "";
+      controllers[name]!.text = normalized.toString();
     }
   }
+
+  // RowVersion
+  rowVersion = fresh["rowVersion"];
 }
+
+  // -----------------------------
+  // LOOKUPS
+  // -----------------------------
   Future<void> loadLookups() async {
     for (var f in entity.fields) {
       if (f.dataType == "lookup" && f.lookupEntity != null) {
@@ -95,6 +137,9 @@ Future<void> loadRecord() async {
     lookupsLoaded = true;
   }
 
+  // -----------------------------
+  // SYNC CONTROLLERS
+  // -----------------------------
   void syncControllersToFormData() {
     for (var field in entity.fields) {
       if (_needsController(field)) {
@@ -107,54 +152,119 @@ Future<void> loadRecord() async {
     return formData[name] != originalData[name];
   }
 
-  bool get hasUnsavedChanges {
-    for (var key in formData.keys) {
-      if (formData[key] != originalData[key]) return true;
+bool get hasUnsavedChanges {
+  print("🔎 Revisando cambios…");
+
+  final fieldNames = entity.fields.map((f) => f.name).toSet();
+
+  for (var key in formData.keys) {
+
+    // 🔥 IGNORAR CAMPOS QUE NO SON DEL FORMULARIO
+    if (!fieldNames.contains(key)) continue;
+
+    // 🔥 IGNORAR PRIMARY KEY
+    if (key == entity.primaryKey) continue;
+
+    final a = formData[key];
+    final b = originalData[key];
+
+    final na = (a == null || a == "") ? "" : a;
+    final nb = (b == null || b == "") ? "" : b;
+
+    if (na != nb) {
+      print("⚠️ CAMBIO DETECTADO en '$key'");
+      print("   formData[$key]     = '$na' (${na.runtimeType})");
+      print("   originalData[$key] = '$nb' (${nb.runtimeType})");
+      return true;
     }
-    return false;
   }
 
-Future<Map<String, dynamic>> save() async {
+  print("✔ Sin cambios");
+  return false;
+} 
+ // -----------------------------
+  // SAVE TO BACKEND (UNIFICADO)
+  // -----------------------------
+
+Future<SaveResult> saveToBackend() async {
+  // 1) sincronizar controles
   syncControllersToFormData();
 
-  final pk = entity.primaryKey;
-  final id = originalData[pk];
+  // 2) construir payload solo con campos del formulario (defensivo)
+  final payload = <String, dynamic>{};
+  for (var f in entity.fields) {
+    final name = f.name;
+    if (formData.containsKey(name)) {
+      payload[name] = formData[name];
+    }
+  }
 
-  // ⭐ Incluir RowVersion en el payload
-  formData["rowVersion"] = rowVersion;
+  final isEdit = (mode == FormMode.edit);
 
-  // ⭐ Llamar al backend
+  // 3) limpiar locks por si acaso (no deberían estar en payload porque no son fields)
+  payload.remove("LockedByUserId");
+  payload.remove("LockedAt");
+  payload.remove("LockedSessionId");
+
+  // 4) rowVersion: solo en EDIT, y solo una clave
+  if (isEdit) {
+    if (rowVersion != null) {
+      payload["rowVersion"] = rowVersion; // debe ser la cadena base64 que el backend entiende
+    }
+  } else {
+    // CREATE: asegurarse de no enviar ninguna variante
+    payload.remove("rowVersion");
+    payload.remove("RowVersion");
+    payload.remove("ROWVERSION");
+    payload.remove("timestamp");
+  }
+
+  // 5) debug: ver exactamente lo que vamos a enviar
+  print("🟩 FINAL PAYLOAD = $payload");
+  print("🟥 JSON enviado = ${jsonEncode(payload)}");
+
+  // 6) enviar la copia limpia
   final result = await api.saveData(
     entity.name,
-    formData,
-    id: id,
+    payload,
+    id: isEdit ? recordId : null,
   );
 
-  // ⭐ Conflicto de concurrencia
+  // 7) manejar respuesta
   if (result["conflict"] == true) {
-    return {
-      "success": false,
-      "conflict": true,
-      "currentRowVersion": result["currentRowVersion"],
-    };
+    return SaveResult(
+      success: false,
+      conflict: true,
+      currentRowVersion: result["currentRowVersion"],
+    );
   }
 
-  // ⭐ Guardado exitoso → actualizar RowVersion
   if (result["success"] == true) {
+    // actualizar rowVersion desde el servidor (debe venir como base64 o como lo devuelva el backend)
     rowVersion = result["rowVersion"];
+
+    // marcar originalData con los valores limpios (si quieres mantener rowVersion en originalData para edit, añade la clave)
+    originalData = Map<String, dynamic>.from(payload);
+
+    if (!isEdit) {
+      recordId = result["id"];
+    }
+ // Devolver datos útiles al caller
+    return SaveResult(
+      success: true,
+      conflict: false,
+      id: result["id"] ?? recordId,
+      rowVersion: result["rowVersion"],
+      data: Map<String, dynamic>.from(payload) // o formData según prefieras
+    );
+
+   // return SaveResult(success: true, conflict: false); se quita para ver si actualiza la lista
+  }
+
+  return SaveResult(success: false, conflict: false);
+}
+
+  void markAllClean() {
     originalData = Map<String, dynamic>.from(formData);
   }
-
-  return {
-    "success": true,
-    "conflict": false,
-  };
-}
-void markAllClean() {
-  // Copiar el estado actual como el nuevo estado original
-  originalData = Map<String, dynamic>.from(formData);
-
-  // Si usás RowVersion, asegurate de mantenerla
-  // (ya debería estar actualizada después del save)
-}
 }

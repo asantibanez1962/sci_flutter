@@ -16,16 +16,28 @@ import 'validation/field_validator.dart';
 import '../../models/form_mode.dart';
 import '../../models/lock_status.dart';
 import '../form_editing_mixin.dart';
+import '../../models/master_data/form_section_master_data.dart';
+import '../dynamic_form_view_master_data/dynamic_form_section_render.dart';
+import '../../models/save_result.dart';
+
 
 
 class DynamicFormView extends StatefulWidget {
+  final DynamicFormController controller; // ← AGREGAR ESTO
   final ApiClient api;
   final EntityDefinition entity;
   final Map<String, dynamic>? initialData;
+  final void Function(Map<String, dynamic> result)? onSaved;
   final Future<void> Function() onClose;
   final Future<bool> Function()? onRequestClose;
   final List<String>? visibleFields;
   final bool showInternalBackButton;
+  final Widget Function(
+      BuildContext context,
+        Widget Function(String fieldName) buildField,
+      )? customContentBuilder;
+
+  final List<FormSectionMasterData>? sections;
 
   const DynamicFormView({
     super.key,
@@ -33,10 +45,13 @@ class DynamicFormView extends StatefulWidget {
     required this.entity,
     required this.initialData,
     required this.onClose,
+    required this.controller,  // ← AGREGAR ESTO
+    this.onSaved,
     this.onRequestClose,
     this.visibleFields,
     this.showInternalBackButton = true, // por defecto TRUE
-
+    this.customContentBuilder,
+  this.sections,
   });
 
   @override
@@ -45,35 +60,34 @@ class DynamicFormView extends StatefulWidget {
 }
 
 class DynamicFormViewState extends State<DynamicFormView> with FormEditingMixin, AutomaticKeepAliveClientMixin{
-  late final DynamicFormController controller;
+  //late final DynamicFormController controller;
   late final String sessionId;
 
     @override
   bool get wantKeepAlive => true;
 
-  FormMode mode = FormMode.view;
+//  FormMode mode = FormMode.view; se quita por casos de multiples tabs
   Timer? lockRefreshTimer;
 
   @override
   void initState() {
     super.initState();
+
+    if (widget.controller.mode == FormMode.create) {
+        widget.controller.mode = FormMode.edit;
+      }
+
     // 🔥 UNA SESIÓN ÚNICA POR PESTAÑA
   sessionId = const Uuid().v4();
-
-    controller = DynamicFormController(
-      api: widget.api,
-      entity: widget.entity,
-      initialData: widget.initialData,
-    );
-
-  
    // 3. Cargar datos
-  controller.loadRecord().then((_) {
+  widget.controller.loadRecord().then((_) {
     // 4. AHORA sí podemos consultar el lock
+   // debugPrint("check lock");
     checkExistingLock();
   });
 
-    controller.loadLookups().then((_) {
+    widget.controller.loadLookups().then((_) {
+    //  print("fin lookups");
       if (mounted) setState(() {});
     });
     
@@ -84,11 +98,11 @@ class DynamicFormViewState extends State<DynamicFormView> with FormEditingMixin,
   String get entityName => widget.entity.name;
 
   @override
-  int get recordId => controller.recordId;
+  int? get recordId => widget.controller.recordId;
 
 @override
 Future<LockResult> acquireLock() async {
- // print(">>> from simple: acquireLock() llamado");
+  debugPrint(">>> from simple: acquireLock() llamado");
   final result = await widget.api.lockRecord(entityName, recordId, sessionId);
 
   return LockResult(
@@ -126,9 +140,9 @@ Future<void> releaseLock() async {
 @override
 Widget build(BuildContext context) {
   super.build(context); // necesario por AutomaticKeepAlive
-
+  //debugPrint("Entra a Build");
   return PopScope(
-    canPop: !controller.hasUnsavedChanges,
+    canPop: !widget.controller.hasUnsavedChanges,
     onPopInvokedWithResult: (didPop, result) async {
       if (didPop) return;
       final ok = await attemptClose();
@@ -150,10 +164,8 @@ Widget build(BuildContext context) {
       // ⭐⭐ AQUÍ VA EL BANNER + FORMULARIO ⭐⭐
       body: Column(
         children: [
-          buildLockBanner(),   // ← Banner del mixin
-
-          // ⭐ NO usar Expanded aquí
-          // porque _buildBody() YA contiene un Expanded interno
+          _buildLockBannerFromController(),
+//          buildLockBanner(),   // ← Banner del mixin
           Expanded(
             child: _buildBody(),
           ),
@@ -164,38 +176,78 @@ Widget build(BuildContext context) {
 }
 
   Widget _buildBody() {
+  //debugPrint("Entro a Build Body");
+
+  final allFields = widget.entity.fields; // ← List<FieldDefinition>
+
   final fieldsToShow = widget.visibleFields == null
+      ? allFields
+      : allFields.where((f) => widget.visibleFields!.contains(f.name)).toList();
+
+ // ⭐⭐ AQUÍ CREAMOS fieldsForThisTab ⭐⭐
+  final fieldsForThisTab = widget.sections != null
+      ? _getFieldsForTab(widget.sections!, allFields)
+      : fieldsToShow;
+
+ /* final fieldsToShow = widget.visibleFields == null
       ? widget.entity.fields
       : widget.entity.fields
           .where((f) => widget.visibleFields!.contains(f.name))
-          .toList();
+          .toList();*/
 
   return Padding(
     padding: const EdgeInsets.all(12),
     child: Column(
       children: [
-        if (controller.hasUnsavedChanges) const UnsavedChangesBanner(),
+        if (widget.controller.hasUnsavedChanges) const UnsavedChangesBanner(),
 
         Expanded(
           child: ListView(
             children: [
+              if (widget.sections != null)
+                  DynamicFormSectionRenderer(
+                    sections: widget.sections!,
+                    fields: fieldsForThisTab,
+                    buildField: (fieldName) {
+                      final field = fieldsToShow.firstWhere((f) => f.name == fieldName);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _buildField(field),
+                      );
+                    },
+                  )
+                else
+                  ...fieldsToShow.map(
+                    (field) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _buildField(field),
+                    ),
+                  ),
+              /*
               ...fieldsToShow.map(
                 (field) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _buildField(field),
                 ),
               ),
-
+*/
               const SizedBox(height: 16),
 
               // -------------------------------
               // BOTONES SEGÚN EL MODO
               // -------------------------------
-              if (mode == FormMode.view)
+              if (widget.controller.mode == FormMode.view)
                 SizedBox(
                   height: 36,
                   child: ElevatedButton(
-                    onPressed: startEditing,
+                    onPressed: () async {
+                        //  print("🟦 BOTÓN EDITAR → PRESIONADO");
+                        await widget.controller.startEditing();
+                        //print("🟦 CONTROLLER MODE DESPUÉS DE startEditing(): ${widget.controller.mode}");
+                        setState(() {});
+                      },
+
+                    // onPressed: startEditing,
                     child: const Text(
                       "Editar",
                       style: TextStyle(fontSize: 13),
@@ -203,7 +255,7 @@ Widget build(BuildContext context) {
                   ),
                 ),
 
-              if (mode == FormMode.edit) ...[
+              if (widget.controller.mode == FormMode.edit) ...[
                 SizedBox(
                   height: 36,
                   child: ElevatedButton(
@@ -217,14 +269,23 @@ Widget build(BuildContext context) {
                 const SizedBox(height: 8),
                 SizedBox(
                   height: 36,
-                  child: OutlinedButton(
-                    onPressed: cancelEditing,
-                    child: const Text(
-                      "Cancelar",
-                      style: TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ),
+child: OutlinedButton(
+  onPressed: () async {
+    // 🔥 1. Liberar lock y volver a modo vista
+    await widget.controller.cancelEditing();
+
+    // 🔥 2. Refrescar la UI
+    if (mounted) setState(() {});
+
+    // 🔥 3. Si DynamicFormView está dentro de MasterData,
+    //     NO cerramos aquí. Solo cambiamos modo.
+    //     El cierre lo maneja TabManager.
+  },
+  child: const Text(
+    "Cancelar",
+    style: TextStyle(fontSize: 13),
+  ),
+),                ),
               ],
             ],
           ),
@@ -235,21 +296,21 @@ Widget build(BuildContext context) {
 }
   Widget _buildField(FieldDefinition field) {
     final name = field.name;
-    final value = controller.formData[name];
-    final modified = controller.isModified(name);
+    final value = widget.controller.formData[name];
+    final modified = widget.controller.isModified(name);
     final error = FieldValidator.validate(field, value);
-    final isEditable = (mode == FormMode.edit);
-
-    //print("Field en _buildField: ${field.name} minLength=${field.minLength}");
+    final isEditable = (widget.controller.mode == FormMode.edit);
+    //debugPrint("Field en _buildField: ${field.name} value: ${value} type:${field.dataType}");
     // lookup: esperar a que carguen
-    if (field.dataType == "lookup" && !controller.lookupsLoaded) {
+    if (field.dataType == "lookup" && !widget.controller.lookupsLoaded) {
+     // debugPrint("is lookup");
       return const Center(child: CircularProgressIndicator());
     }
 
     // lookup
    // lookup
   if (field.dataType == "lookup") {
-    final map = controller.lookupData[name] ?? {};
+    final map = widget.controller.lookupData[name] ?? {};
     return LookupFieldBuilder.buildLookupField(
       context: context,
       field: field,
@@ -259,7 +320,7 @@ Widget build(BuildContext context) {
       enabled: isEditable,                    // ⭐ NUEVO
       onChanged: isEditable
           ? (v) {
-              setState(() => controller.formData[name] = v);
+              setState(() => widget.controller.formData[name] = v);
             }
           : (_){},
       loadDialogRows: () async {
@@ -280,7 +341,7 @@ Widget build(BuildContext context) {
       enabled: isEditable,                    // ⭐ NUEVO
       onChanged: isEditable
           ? (v) {
-              setState(() => controller.formData[name] = v);
+              setState(() => widget.controller.formData[name] = v);
             }
          : (_){},
     );
@@ -290,14 +351,14 @@ Widget build(BuildContext context) {
 if (field.fieldType == "text") {
     return TextFieldWidget(
       label: field.label,
-      controller: controller.controllers[name]!,
+      controller: widget.controller.controllers[name]!,
       modified: modified,
       errorText: error,
       enabled: isEditable,                    // ⭐ NUEVO
       onChanged: isEditable
           ? (v) {
               setState(() {
-                controller.formData[name] = v;
+                widget.controller.formData[name] = v;
               });
             }
           : (_){},
@@ -307,12 +368,12 @@ if (field.fieldType == "text") {
 if (field.fieldType == "number") {
     return NumberFieldWidget(
       label: field.label,
-      controller: controller.controllers[name]!,
+      controller: widget.controller.controllers[name]!,
       modified: modified,
       enabled: isEditable,                    // ⭐ NUEVO
       onChanged: isEditable
           ? (v) {
-              setState(() => controller.formData[name] = v);
+              setState(() => widget.controller.formData[name] = v);
             }
          : (_){},
     );
@@ -327,7 +388,7 @@ if (field.fieldType == "number") {
       enabled: isEditable,                    // ⭐ NUEVO
       onChanged: isEditable
           ? (iso) {
-              setState(() => controller.formData[name] = iso);
+              setState(() => widget.controller.formData[name] = iso);
             }
           : null,
     );
@@ -341,7 +402,7 @@ if (field.fieldType == "number") {
       enabled: isEditable,                    // ⭐ NUEVO
       onChanged: isEditable
           ? (v) {
-              setState(() => controller.formData[name] = v);
+              setState(() => widget.controller.formData[name] = v);
             }
           : (_){},
     );
@@ -351,6 +412,56 @@ if (field.fieldType == "number") {
   return Text("Tipo no soportado: ${field.fieldType}");
 
   }
+
+Widget _buildLockBannerFromController() {
+  final c = widget.controller;
+
+  if (!c.isLockedByAnotherUser) return const SizedBox.shrink();
+
+  final elapsed = c.lockedAt != null
+      ? formatElapsed(DateTime.now().difference(c.lockedAt!))
+      : "";
+
+  return Container(
+    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+    decoration: BoxDecoration(
+      color: Colors.red.shade100,
+      border: Border(
+        bottom: BorderSide(color: Colors.red.shade300, width: 0.5),
+      ),
+    ),
+    child: Row(
+      children: [
+        Icon(Icons.lock, color: Colors.red.shade700, size: 16),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            "Bloqueado por ${c.lockedBy} — $elapsed",
+            style: TextStyle(
+              color: Colors.red.shade800,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+List<FieldDefinition> _getFieldsForTab(
+  List<FormSectionMasterData> sections,
+  List<FieldDefinition> allFields,
+) {
+  final fieldNamesInTab = sections
+      .expand((s) => s.items)
+      .where((i) => i.detailType == 'field' && i.fieldName != null)
+      .map((i) => i.fieldName!)
+      .toSet();
+
+  return allFields.where((f) => fieldNamesInTab.contains(f.name)).toList();
+}
+
 Future<bool> handleExternalClose() async {
   final ok = await attemptClose();
   if (!ok) return false;
@@ -363,6 +474,9 @@ Future<bool> handleExternalClose() async {
   //await widget.onClose();
   return true;
 }
+
+
+
 /*
 void _showLockedPopup(String lockedBy, DateTime? lockedAt) {
   showDialog(
@@ -381,8 +495,13 @@ void _showLockedPopup(String lockedBy, DateTime? lockedAt) {
 }
 */
 
+/*
 Future<void> _save() async {
-  final result = await controller.save();
+  //final result = await widget.controller.save();
+  await widget.controller.save(() async {
+  final result = await widget.controller.saveLocal(); // ← tu método viejo
+      await _handleSaveResult(result);
+  });
 
   // ⭐ Conflicto de concurrencia
   if (result["conflict"] == true) {
@@ -404,13 +523,13 @@ Future<void> _save() async {
     );
 
     // ⭐ Actualizar RowVersion local
-    controller.rowVersion = result["currentRowVersion"];
+    widget.controller.rowVersion = result["currentRowVersion"];
 
     // ⭐ Recargar datos
-    await controller.loadRecord();
+    await widget.controller.loadRecord();
 
     setState(() {
-      mode = FormMode.view;
+      widget.controller.mode = FormMode.view;
     });
 
     return;
@@ -418,15 +537,107 @@ Future<void> _save() async {
 
   // ⭐ Guardado exitoso
   setState(() {
-    mode = FormMode.view;
-    controller.markAllClean();
+    widget.controller.mode = FormMode.view;
+    widget.controller.markAllClean();
   });
 }
 
+*/
 
+Future<void> _save() async {
+  // Llamamos al flujo unificado: FormEditingController.save → DynamicFormController.saveToBackend
+  final SaveResult result = await widget.controller.save(
+    () => widget.controller.saveToBackend(),
+  );
 
+  // -----------------------------
+  // CREATE (venía de FormMode.create)
+  // -----------------------------
+  if (widget.controller.mode == FormMode.view &&
+      !result.conflict &&
+      widget.controller.recordId != 0 &&
+      widget.controller.rowVersion != null) {
+    // Caso típico: era CREATE, guardó bien, ahora está en view
+    setState(() {
+      widget.controller.markAllClean();
+    });
+    // Notificar al padre que se guardó (importante para la lista)
+    if (widget.onSaved != null) {
+      widget.onSaved!({
+        "success": true,
+        "id": result.id,
+        "rowVersion": result.rowVersion,
+        "data": result.data
+      });
+    }
+
+    return;
+  }
+
+  // -----------------------------
+  // EDIT — conflicto de concurrencia
+  // -----------------------------
+  if (result.conflict) {
+    await _showConflictDialog();
+
+    if (result.currentRowVersion != null) {
+      widget.controller.rowVersion = result.currentRowVersion;
+      await widget.controller.loadRecord();
+    }
+
+    setState(() {});
+    return;
+  }
+
+  // -----------------------------
+  // EDIT — éxito normal
+  // -----------------------------
+  setState(() {
+    widget.controller.markAllClean();
+  });
+}
+
+/*
+Future<void> _handleSaveResult(Map<String, dynamic> result) async {
+  if (result["conflict"] == true) {
+    await _showConflictDialog();
+
+    widget.controller.rowVersion = result["currentRowVersion"];
+    await widget.controller.loadRecord();
+
+    setState(() {
+      widget.controller.mode = FormMode.view;
+    });
+
+    return;
+  }
+
+  setState(() {
+    widget.controller.mode = FormMode.view;
+    widget.controller.markAllClean();
+  });
+}
+*/
+Future<void> _showConflictDialog() async {
+  await showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text("Conflicto de edición"),
+      content: const Text(
+        "Otro usuario modificó este registro.\n"
+        "Debes recargar antes de continuar.",
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Aceptar"),
+        ),
+      ],
+    ),
+  );
+}
   Future<bool> _confirmExit() async {
-    if (!controller.hasUnsavedChanges) return true;
+    if (!widget.controller.hasUnsavedChanges) return true;
 
     final result = await showDialog<bool>(
       context: context,
@@ -452,7 +663,7 @@ Future<void> _save() async {
 
  bool get hasValidationErrors {
   for (var field in widget.entity.fields) {
-    final value = controller.formData[field.name];
+    final value = widget.controller.formData[field.name];
     final error = FieldValidator.validate(field, value);
     if (error != null) return true;
   }
@@ -460,7 +671,18 @@ Future<void> _save() async {
 }
 
 Future<bool> attemptClose() async {
-  // 1. Si hay errores de validación → bloquear cierre
+  debugPrint("attemptClose de dynamic form view");
+
+  // -----------------------------
+  // 1. CREATE → permitir cerrar SIEMPRE
+  // -----------------------------
+  if (widget.controller.mode == FormMode.create) {
+    return true;
+  }
+
+  // -----------------------------
+  // 2. EDIT → validar errores
+  // -----------------------------
   if (hasValidationErrors) {
     await showDialog(
       context: context,
@@ -475,15 +697,23 @@ Future<bool> attemptClose() async {
         ],
       ),
     );
-    return false; // ❌ No permitir cerrar
+    return false;
   }
 
-  // 2. Si NO hay cambios → permitir cerrar
-  if (!controller.hasUnsavedChanges) return true;
+  // -----------------------------
+  // 3. EDIT → sin cambios → cerrar
+  // -----------------------------
+  if (!widget.controller.hasUnsavedChanges) {
+    return true;
+  }
 
-  // 3. Si hay cambios → pedir confirmación
-  return await _confirmExit();
- }
+  // -----------------------------
+  // 4. EDIT → con cambios → pedir confirmación
+  // -----------------------------
+  final confirm = await _confirmExit();
+  return confirm;
+}
+
 
  String? convertDMYtoISO(String? dmy) {
   if (dmy == null || dmy.isEmpty) return null;
@@ -506,5 +736,9 @@ Future<bool> attemptClose() async {
   }
 }
 
-
+void setExternalMode(FormMode newMode) {
+  setState(() {
+    mode = newMode;
+  });
+}
 }

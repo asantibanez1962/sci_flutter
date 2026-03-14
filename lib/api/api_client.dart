@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/entity_definition.dart';
 import '../models/form_metadata.dart';
+import '../../models/master_data/form_metadata_master_data.dart';
 import '../models/lock_result.dart';
 import '../models/lock_status.dart';
 import '../models/save_result.dart';
@@ -25,10 +26,10 @@ class ApiClient {
 Future<EntityDefinition> getEntityMetadata(String entityName) async {
   final url = Uri.parse('$baseUrl/metadata/entity/$entityName');
   final response = await http.get(url);
-  //debugPrint("RAW DATA RESPONSE: ${response.body}");
+  /*debugPrint("RAW DATA RESPONSE: ${response.body}");
   if (response.statusCode != 200) {
     throw Exception('Error al obtener metadata de entidad: ${response.body}');
-  }
+  }*/
 
   final jsonData = jsonDecode(response.body);
   return EntityDefinition.fromJson(jsonData);
@@ -68,7 +69,7 @@ Future<EntityDefinition> getEntityMetadata(String entityName) async {
     final url = Uri.parse('$baseUrl/data/$entity');
 
     final res = await http.get(url);
-    debugPrint("Respuesta backend (GET): ${res.body}");
+    //debugPrint("Respuesta backend (GET): ${res.body}");
 
     final List<dynamic> data = jsonDecode(res.body);
 
@@ -88,10 +89,10 @@ Future<EntityDefinition> getEntityMetadata(String entityName) async {
   // 2) POST /filter (con filtros)
   // ---------------------------------------------
   final url = Uri.parse('$baseUrl/data/$entity/filter');
-   debugPrint("URL llamada (GET): $url  $entity");
+   //debugPrint("URL llamada (GET): $url  $entity");
 
-  debugPrint("URL llamada (POST FILTER): $url");
-  debugPrint("Body enviado: ${jsonEncode({"filters": filters})}");
+  //debugPrint("URL llamada (POST FILTER): $url");
+  //debugPrint("Body enviado: ${jsonEncode({"filters": filters})}");
 
   final res = await http.post(
     url,
@@ -99,7 +100,7 @@ Future<EntityDefinition> getEntityMetadata(String entityName) async {
     body: jsonEncode({"filters": filters}),
   );
 
-  debugPrint("Respuesta backend (FILTER): ${res.body}");
+  //debugPrint("Respuesta backend (FILTER): ${res.body}");
 
   final List<dynamic> data = jsonDecode(res.body);
 
@@ -124,9 +125,10 @@ Future<Map<String, dynamic>> saveData(
       ? '$baseUrl/data/$entity'
       : '$baseUrl/data/$entity/$id';
 
-  //debugPrint("➡️ saveData() INICIO");
-  //debugPrint("URL: $url");
-  //debugPrint("DATA: ${jsonEncode(data)}");
+  debugPrint("➡️ saveData() INICIO");
+  debugPrint("URL: $url");
+  debugPrint("DATA: ${jsonEncode(data)}");
+ debugPrint(jsonEncode(data));
 
   final response = await (id == null
       ? http.post(
@@ -189,7 +191,7 @@ Future<Map<String, dynamic>> getById(String entity, dynamic id) async {
 
   Future<List<Map<String, dynamic>>?> getColumnVisibility(String entity) async {
   final url = Uri.parse('$baseUrl/column-visibility/$entity');
-
+print("visibility:$url");
   final response = await http.get(url);
 
   if (response.statusCode == 200) {
@@ -258,6 +260,7 @@ Future<List<Map<String, dynamic>>> getLookupRows(
 }
 
 Future<FormMetadata> getFormMetadata(String entityName) async {
+  //print("anterior metadata $entityName");
   final response = await http.get(
     Uri.parse('$baseUrl/metadata/form/$entityName'),
   );
@@ -270,6 +273,26 @@ Future<FormMetadata> getFormMetadata(String entityName) async {
 
   final jsonData = jsonDecode(response.body);
   return FormMetadata.fromJson(jsonData);
+}
+
+Future<FormMetadataMasterData> getFormMetadataMaster(String entityName) async {
+  final response = await http.get(
+    Uri.parse('$baseUrl/api/forms/$entityName'),
+  );
+  //debugPrint("$baseUrl/api/forms/$entityName");
+  //debugPrint("📌 JSON metadata nuevo para $entityName:");
+  //debugPrint(response.body);   
+
+  if (response.statusCode != 200) {
+    throw Exception("Error loading master Form metadata for $entityName");
+  }
+
+  final jsonData = jsonDecode(response.body);
+  //debugPrint("=== FORM RESPONSE ===");
+ // debubPrint(const JsonEncoder.withIndent('  ').convert(response.data));
+  //debugPrint(const JsonEncoder.withIndent('  ').convert(response.body));
+
+  return FormMetadataMasterData.fromJson(jsonData);
 }
 
 Future<void> logUiEvent({
@@ -298,10 +321,9 @@ Future<void> logUiEvent({
   // -----------------------------------------
   // ACQUIRE LOCK
   // -----------------------------------------
-Future<LockResult> lockRecord(String entity, int id, String sessionId) async {
+Future<LockResult> lockRecord(String entity, int? id, String sessionId) async {
   final url = Uri.parse('$baseUrl/api/lock/$entity/$id/acquire');
   //print(">>> URL: $url");
-
   //print(">>> LOCK REQUEST: entity=$entity id=$id userId=$userId sessionId=$sessionId");
 
   final response = await http.post(
@@ -358,9 +380,9 @@ Future<LockResult> lockRecord(String entity, int id, String sessionId) async {
   // -----------------------------------------
   // REFRESH LOCK
   // -----------------------------------------
-Future<bool> refreshLock(String entity, int id, String sessionId) async {
+Future<bool> refreshLock(String entity, int? id, String sessionId) async {
   final url = Uri.parse('$baseUrl/api/lock/$entity/$id/refresh');
-
+ // debugPrint("refresh:$url");
   final response = await http.post(
     url,
     headers: {'Content-Type': 'application/json'},
@@ -393,7 +415,7 @@ Future<bool> refreshLock(String entity, int id, String sessionId) async {
 // -----------------------------------------
   // RELEASE LOCK
   // -----------------------------------------
-Future<void> releaseLock(String entity, int id, String sessionId) async {
+Future<void> releaseLock(String entity, int? id, String sessionId) async {
   final url = Uri.parse('$baseUrl/api/lock/$entity/$id/release');
 //print("🔥 RELEASE LOCK ejecutado desde dispose()");
   final response = await http.post(
@@ -410,7 +432,7 @@ Future<void> releaseLock(String entity, int id, String sessionId) async {
   }
 }
 
-Future<LockStatus> getLockStatus(String entity, int id) async {
+Future<LockStatus> getLockStatus(String entity, int? id) async {
   final url = Uri.parse("$baseUrl/api/lock/$entity/$id/status");
 
   final response = await http.get(url);
