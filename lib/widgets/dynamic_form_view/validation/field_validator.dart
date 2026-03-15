@@ -1,9 +1,10 @@
 import '../../../models/field_definition.dart';
+import 'package:flutter/foundation.dart';
 
 class FieldValidator {
   static String? validate(FieldDefinition field, dynamic value) {
     
-    //debugPrint("Validando ${field.name}: value='$value' minLength=${field.minLength}");
+    debugPrint("Validando ${field.name}: value='$value' minLength=${field.minLength} isrequired=${field.isRequired}");
     // 1. Required
     if (field.isRequired) {
       if (value == null || value.toString().trim().isEmpty) {

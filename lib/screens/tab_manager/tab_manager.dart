@@ -52,14 +52,14 @@ late final Map<String, EntityDefinition> entityMap;
   // -------------------------
 
 
-
+/*sin controller
 void _openCreateTabMaster(
   EntityDefinition entity,
   FormMetadataMasterData metadata, {
   bool save = true,
 }) {
   final tabId = "create_${entity.name}";
-  final previousTabIndex = controller.index;
+  //final previousTabIndex = controller.index;
 
   final Map<String, dynamic> emptyData = {};
 
@@ -110,6 +110,8 @@ void _openCreateTabMaster(
     if (save) _saveTabs();
   }
 }
+*/
+//con controller fuera del tab
 
 Future<void> openFormForEdit(
   EntityDefinition entity,
@@ -428,7 +430,7 @@ void _openEditTab(
 
   // ----------------- ABRIR PESTAÑAS -----------------
 void _openEntityTab(EntityDefinition entity, {bool save = true}) async {
-  debugPrint("open entitytab $entity.name");
+  //debugPrint("open entitytab $entity.name");
     final fullEntity = await widget.api.getEntityMetadata(entity.name);
     entity.fields = fullEntity.fields;
 
@@ -487,7 +489,7 @@ Future<void> openFormForCreate(EntityDefinition entity) async {
 }
 
 void _openCreateTab(EntityDefinition entity, {bool save = true}) {
-  debugPrint("Entro a create tab");
+  //debugPrint("Entro a create tab");
   final tabId = "create_${entity.name}";
   final formKey = GlobalKey<DynamicFormViewState>();
 
@@ -570,6 +572,96 @@ void _openCreateTab(EntityDefinition entity, {bool save = true}) {
   void _saveTabs() {
     TabPersistence.saveTabs(tabs);
   }
+
+  //con controller fuera del tab
+void _openCreateTabMaster(
+  EntityDefinition entity,
+  FormMetadataMasterData metadata, {
+  bool save = true,
+}) {
+  final tabId = "create_${entity.name}";
+  //final previousTabIndex = controller.index;
+
+  final Map<String, dynamic> emptyData = {};
+
+  final formKey = GlobalKey<DynamicFormViewState>();
+  // 🔥 1. Crear el controller FUERA del builder
+  final controller = DynamicFormController(
+    api: widget.api,
+    entity: entity,
+    initialData: null,
+  );
+
+  // 🔥 2. Configurar modo CREATE
+  controller.mode = FormMode.create;
+  controller.entityName = entity.name;
+  controller.recordId = null;        // ← importante
+  controller.sessionId = const Uuid().v4();
+
+ // 3. En CREATE no hay locking real
+  controller.acquireLock = () async => LockResult(
+        success: true,
+        conflict: false,
+      );
+
+  controller.releaseLock = () async => LockResult(
+        success: true,
+        conflict: false,
+      );
+
+  controller.refreshLock = () async => LockResult(
+        success: true,
+        conflict: false,
+      );
+
+  controller.fetchLockStatus = () async => LockStatus(
+        locked: false,
+        lockedBy: null,
+        lockedAt: null,
+        sessionId: null,
+      );
+
+
+  tabs.add(
+    TabItem(
+      id: tabId,
+      title: "Nuevo ${entity.displayName}",
+      icon: tabIcon(TabType.create),
+      color: tabColor(TabType.create),
+      closable: true,
+      formKey: formKey,
+      controller: controller,   // ← AHORA SÍ
+      builder: () {
+        return TabViewWrapper(
+          child: DynamicFormViewMasterData(
+            metadata: metadata,
+            data: emptyData,
+            api: widget.api,
+            entity: entity,
+            entityMap: entityMap,
+            controller: controller,   // ← AHORA SÍ
+            onClose: () async {
+              final ok = await formKey.currentState?.attemptClose() ?? true;
+              if (!ok) return;
+                // 2. 🔥 LIBERAR LOCK ANTES DE CERRAR LA PESTAÑA
+            //  await controller.cancelEditing();
+              final createIndex = tabs.indexWhere((t) => t.id == tabId);
+              if (createIndex != -1) _closeTab(createIndex);
+
+              setState(() {});
+            },
+          ),
+        );
+      },
+    ),
+  );
+
+  if (!_restoring) {
+    _rebuildController(targetIndex: tabs.length - 1);
+    if (save) _saveTabs();
+  }
+}
+
 
 Future<void> _closeTab(int index) async {
   //print("⛳ _closeTab($index) INICIO");

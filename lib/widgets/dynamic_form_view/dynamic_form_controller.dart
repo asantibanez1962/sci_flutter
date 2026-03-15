@@ -29,7 +29,7 @@ class DynamicFormController extends FormEditingController {
     required Map<String, dynamic>? initialData,
   }) {
     sessionId = const Uuid().v4();
-
+   // debugPrint('Controller created: ${hashCode} entity=$entityName id=$recordId session=$sessionId');
     if (initialData == null) {
       // -----------------------------
       // CREATE MODE
@@ -152,37 +152,71 @@ class DynamicFormController extends FormEditingController {
     return formData[name] != originalData[name];
   }
 
-bool get hasUnsavedChanges {
-  //print("🔎 Revisando cambios…");
 
+bool get hasUnsavedChanges {
   final fieldNames = entity.fields.map((f) => f.name).toSet();
 
-  for (var key in formData.keys) {
+  final ignored = <String>{
+    entity.primaryKey,
+    // añadir otros si corresponde
+  };
 
-    // 🔥 IGNORAR CAMPOS QUE NO SON DEL FORMULARIO
-    if (!fieldNames.contains(key)) continue;
+  String normalize(dynamic v) {
+    if (v == null) return '';
+    if (v is String) return v.trim();
+    if (v is bool) return v ? 'true' : 'false';
+    if (v is num) return v.toString();
+    if (v is DateTime) return v.toIso8601String();
+    try {
+      return jsonEncode(v);
+    } catch (_) {
+      return v.toString();
+    }
+  }
 
-    // 🔥 IGNORAR PRIMARY KEY
-    if (key == entity.primaryKey) continue;
+  print("🔎 hasUnsavedChanges: revisando ${formData.keys.length} keys");
 
-    final a = formData[key];
-    final b = originalData[key];
+  for (final key in formData.keys) {
+    if (!fieldNames.contains(key)) {
+      print("  - Ignorado no es campo del form: $key");
+      continue;
+    }
+    if (ignored.contains(key)) {
+      print("  - Ignorado por lista ignore: $key");
+      continue;
+    }
 
-    final na = (a == null || a == "") ? "" : a;
-    final nb = (b == null || b == "") ? "" : b;
+    final aRaw = formData[key];
+    final bRaw = originalData.containsKey(key) ? originalData[key] : null;
+
+    dynamic a = aRaw;
+    dynamic b = bRaw;
+
+    // Caso lookup: si original es Map con id, extraer id
+    if (b is Map && b.containsKey('id') && (a is num || a is String)) {
+      print("  - originalData[$key] es Map, extrayendo id");
+      b = b['id'];
+    }
+    if (a is Map && a.containsKey('id') && (b is num || b is String)) {
+      print("  - formData[$key] es Map, extrayendo id");
+      a = a['id'];
+    }
+
+    final na = normalize(a);
+    final nb = normalize(b);
+
+    print("  -> comparar $key: form='$na' (${a.runtimeType}) vs orig='$nb' (${b.runtimeType})");
 
     if (na != nb) {
-   //   print("⚠️ CAMBIO DETECTADO en '$key'");
-    //  print("   formData[$key]     = '$na' (${na.runtimeType})");
-   //   print("   originalData[$key] = '$nb' (${nb.runtimeType})");
+      print("   ✱ Cambio detectado en $key");
       return true;
     }
   }
 
-  //print("✔ Sin cambios");
+  print("✔ Sin cambios");
   return false;
 } 
- // -----------------------------
+// -----------------------------
   // SAVE TO BACKEND (UNIFICADO)
   // -----------------------------
 

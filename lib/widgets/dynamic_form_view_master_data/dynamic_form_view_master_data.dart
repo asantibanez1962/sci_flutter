@@ -72,13 +72,18 @@ Future<bool> handleRequestClose() async {
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     masterTab = tabs.first;
-    debugPrint(masterTab.toString());
+    //debugPrint(masterTab.toString());
     tabController = TabController(
       length: tabs.length,
       vsync: this,
     );
     _configureMasterController(); // 👈 AQUÍ
+//se agregan para pobrar caso de create
+    _syncAllControllers();
+    _syncModesFromMaster();
+
      // Llamada directa y segura al callback que ya existe
+     /*
   WidgetsBinding.instance.addPostFrameCallback((_) async {
     try {
       await widget.controller.acquireLock?.call();
@@ -86,7 +91,9 @@ Future<bool> handleRequestClose() async {
     } catch (e, st) {
       debugPrint('Master: acquireLock failed: $e\n$st');
     }
-  });
+  });*/
+   // Asegurar sincronización inicial
+  //widget.controller.syncControllersToFormData();
 
   }
 
@@ -120,7 +127,7 @@ void _configureMasterController() {
         c.entityName,
         c.recordId!,
       );
-       debugPrint('Master controller configured: entity=${c.entityName} id=${c.recordId} session=${c.sessionId}');
+   debugPrint('Master controller configured: entity=${c.entityName} id=${c.recordId} session=${c.sessionId}');
 
 }
 
@@ -130,38 +137,51 @@ void _configureMasterController() {
     super.dispose();
   }
 
-  void _syncAllControllers() {
-    for (var entry in _formKeys.entries) {
-      final state = entry.value.currentState;
-      state?.widget.controller.syncControllersToFormData();
-    }
+ void _syncAllControllers() {
+  debugPrint('syncAllControllers START controller=${widget.controller.hashCode}');
+  for (var entry in _formKeys.entries) {
+    final state = entry.value.currentState;
+    debugPrint('  sync tab=${entry.key} state=${state?.hashCode}');
+    state?.widget.controller.syncControllersToFormData();
+  }
+  debugPrint('syncAllControllers END formData=${widget.controller.formData}');
+}
+
+ void _syncModesFromMaster() {
+  final masterState = _masterFormKey.currentState;
+  if (masterState == null) {
+    debugPrint('syncModesFromMaster: masterState == null');
+    return;
   }
 
-  void _syncModesFromMaster() {
-    final masterState = _masterFormKey.currentState;
-    if (masterState == null) return;
+  final masterMode = masterState.mode;
+  debugPrint('syncModesFromMaster: masterMode=$masterMode');
 
-    final masterMode = masterState.mode;
+  for (var entry in _formKeys.entries) {
+    final tabKey = entry.key;
+    final key = entry.value;
 
-    for (var entry in _formKeys.entries) {
-      final tabKey = entry.key;
-      final key = entry.value;
+    if (tabKey == masterTab.key) {
+      debugPrint('  skip master tab $tabKey');
+      continue;
+    }
 
-      // saltar maestro
-      if (tabKey == masterTab.key) continue;
+    final state = key.currentState;
+    if (state == null) {
+      debugPrint('  tab $tabKey state == null');
+      continue;
+    }
 
-      final state = key.currentState;
-      if (state == null) continue;
-
-      // mismo entity → sigue el modo del maestro
-      if (state.widget.entity.name == widget.entity.name) {
-        state.setExternalMode(masterMode);
-      } else {
-        // distinto entity → siempre view
-        state.setExternalMode(FormMode.view);
-      }
+    debugPrint('  tab $tabKey entity=${state.widget.entity.name}');
+    if (state.widget.entity.name == widget.entity.name) {
+      debugPrint('    setExternalMode($masterMode) on tab $tabKey');
+      state.setExternalMode(masterMode);
+    } else {
+      debugPrint('    setExternalMode(FormMode.view) on tab $tabKey');
+      state.setExternalMode(FormMode.view);
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -465,86 +485,5 @@ void _configureMasterController() {
   );
 }
 
-
-/*
-  Future<void> _openChildPopup(
-    FormDetailMasterData detail,
-    EntityDefinition childEntity,
-    Map<String, dynamic>? row,
-  ) async {
-    final fk = detail.foreignKey;
-
-    final rawColumns = await widget.api.getColumns(childEntity.name);
-    childEntity.fields =
-        rawColumns.map((e) => FieldDefinition.fromJson(e)).toList();
-
-    final pk = widget.entity.primaryKey;
-    final parentId = widget.data[pk] ??
-        widget.data[pk.toLowerCase()] ??
-        widget.data[pk.toUpperCase()];
-
-    final initialData = row ?? {if (fk != null) fk: parentId};
-
-    if (!mounted) return;
-    final formKey = GlobalKey<DynamicFormViewState>();
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-          insetPadding: const EdgeInsets.all(20),
-          child: SizedBox(
-            width: 600,
-            height: 500,
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () async {
-                      final state = formKey.currentState;
-                      if (state != null) {
-                        final ok = await state.handleExternalClose();
-                        if (!ok) return;
-                      }
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: DynamicFormView(
-                    controller: widget.controller,   // ← AQUÍ SE PASA
-                    key: formKey,
-                    api: widget.api,
-                    entity: childEntity,
-                    initialData: initialData,
-                    visibleFields: childEntity.fields
-                        .where((f) => f.name != fk)
-                        .map((f) => f.name)
-                        .toList(),
-                    onClose: () async {
-                      Navigator.of(context).pop();
-                    },
-                    onRequestClose: () async {
-                      final state = formKey.currentState;
-                      if (state != null) {
-                        final ok = await state.handleExternalClose();
-                        if (!ok) return false;
-                      }
-                      Navigator.of(context).pop();
-                      return true;
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-  */
 
 }

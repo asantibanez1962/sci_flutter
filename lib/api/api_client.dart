@@ -324,7 +324,7 @@ Future<void> logUiEvent({
 Future<LockResult> lockRecord(String entity, int? id, String sessionId) async {
   final url = Uri.parse('$baseUrl/api/lock/$entity/$id/acquire');
   //print(">>> URL: $url");
-  //print(">>> LOCK REQUEST: entity=$entity id=$id userId=$userId sessionId=$sessionId");
+  print(">>> LOCK REQUEST: entity=$entity id=$id userId=$userId sessionId=$sessionId");
 
   final response = await http.post(
     url,
@@ -417,7 +417,8 @@ Future<bool> refreshLock(String entity, int? id, String sessionId) async {
   // -----------------------------------------
 Future<void> releaseLock(String entity, int? id, String sessionId) async {
   final url = Uri.parse('$baseUrl/api/lock/$entity/$id/release');
-//print("🔥 RELEASE LOCK ejecutado desde dispose()");
+    print(">>> LOCK RElease: entity=$entity id=$id userId=$userId sessionId=$sessionId");
+  //print("🔥 RELEASE LOCK ejecutado desde dispose()");
   final response = await http.post(
     url,
     headers: {'Content-Type': 'application/json'},

@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import '../../../models/field_definition.dart';
+import '../validation/field_validator.dart';
 
 class TextFieldWidget extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final bool modified;
-  final String? errorText;
+  //final String? errorText;
   final bool enabled;                
   final ValueChanged<String> onChanged;
+  final FieldDefinition? field; // nuevo: la definición del campo
+  //final String? Function(String?)? validator; // nuevo
+  final AutovalidateMode? autovalidateMode; // opcional
+
+
 
   const TextFieldWidget({
     super.key,
@@ -15,8 +22,13 @@ class TextFieldWidget extends StatelessWidget {
     required this.modified,
     required this.enabled,
     required this.onChanged,
-    this.errorText,
+    //this.errorText,
+    this.field,
+    this.autovalidateMode, // = AutovalidateMode.onUserInteraction,  ///estaba disabled
+
   });
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -24,11 +36,12 @@ class TextFieldWidget extends StatelessWidget {
       controller: controller,
       enabled: enabled,
       style: const TextStyle(fontSize: 13), // ⭐ Texto compacto
+      autovalidateMode: autovalidateMode,
       decoration: InputDecoration(
         isDense: true, // ⭐ Reduce altura del TextField
         labelText: label,
         labelStyle: const TextStyle(fontSize: 13), // ⭐ Label compacto
-        errorText: errorText,
+        //errorText: errorText,
         errorStyle: const TextStyle(fontSize: 11), // ⭐ Error compacto
 
         contentPadding: const EdgeInsets.symmetric(
@@ -56,6 +69,12 @@ class TextFieldWidget extends StatelessWidget {
         ), // ⭐ Evita que el ícono agrande el campo
       ),
       onChanged: onChanged,
+      validator: (v) {
+        if (field == null) return null;
+         debugPrint('Validando ${field!.name} -> value="$v"');
+        return FieldValidator.validate(field!, v);
+      },
     );
   }
+  
 }

@@ -62,6 +62,7 @@ class DynamicFormView extends StatefulWidget {
 class DynamicFormViewState extends State<DynamicFormView> with FormEditingMixin, AutomaticKeepAliveClientMixin{
   //late final DynamicFormController controller;
   late final String sessionId;
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
     @override
   bool get wantKeepAlive => true;
@@ -74,6 +75,7 @@ class DynamicFormViewState extends State<DynamicFormView> with FormEditingMixin,
     super.initState();
 
     if (widget.controller.mode == FormMode.create) {
+      debugPrint("cambio modo de create a edit");
         widget.controller.mode = FormMode.edit;
       }
 
@@ -165,10 +167,19 @@ Widget build(BuildContext context) {
       body: Column(
         children: [
           _buildLockBannerFromController(),
-//          buildLockBanner(),   // ← Banner del mixin
-          Expanded(
+
+Expanded(
+  child: Form(
+    key: _formKey,
+    autovalidateMode: AutovalidateMode.always, //onUserInteraction, // o onUserInteraction si quieres validación inmediata
+    child: _buildBody(),
+  ),
+),
+
+
+  /*        Expanded(
             child: _buildBody(),
-          ),
+          ),*/
         ],
       ),
     ),
@@ -194,8 +205,9 @@ Widget build(BuildContext context) {
       : widget.entity.fields
           .where((f) => widget.visibleFields!.contains(f.name))
           .toList();*/
-
-  return Padding(
+    debugPrint("modo:");
+    debugPrint(widget.controller.mode.toString());
+   return Padding(
     padding: const EdgeInsets.all(12),
     child: Column(
       children: [
@@ -241,9 +253,9 @@ Widget build(BuildContext context) {
                   height: 36,
                   child: ElevatedButton(
                     onPressed: () async {
-                        //  print("🟦 BOTÓN EDITAR → PRESIONADO");
+                          print("🟦 BOTÓN EDITAR → PRESIONADO");
                         await widget.controller.startEditing();
-                        //print("🟦 CONTROLLER MODE DESPUÉS DE startEditing(): ${widget.controller.mode}");
+                        print("🟦 CONTROLLER MODE DESPUÉS DE startEditing(): ${widget.controller.mode}");
                         setState(() {});
                       },
 
@@ -329,6 +341,12 @@ child: OutlinedButton(
           field.lookupDisplayFields!,
         );
       },
+       requestValidation: () {
+  debugPrint('Parent: requestValidation invoked from lookup $name');
+  _formKey.currentState?.validate();
+},
+       
+
     );
   }
 
@@ -353,15 +371,22 @@ if (field.fieldType == "text") {
       label: field.label,
       controller: widget.controller.controllers[name]!,
       modified: modified,
-      errorText: error,
+      //errorText: error,
       enabled: isEditable,                    // ⭐ NUEVO
+      field: field, // <-- pasar la definición
+      autovalidateMode: AutovalidateMode.always, // opcional
       onChanged: isEditable
           ? (v) {
               setState(() {
                 widget.controller.formData[name] = v;
               });
+           // Notificar al controller / owner que hubo cambio probando si es create de master data
+           // widget.controller.onChanged?.call();
+            debugPrint('Field onChanged controller=${widget.controller.hashCode} field=$name value=$v');
+
             }
           : (_){},
+          //validator: (v) => FieldValidator.validate(field, v), 
     );
   }
 
@@ -477,73 +502,6 @@ Future<bool> handleExternalClose() async {
 
 
 
-/*
-void _showLockedPopup(String lockedBy, DateTime? lockedAt) {
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text("Registro bloqueado"),
-      content: Text("Este registro está siendo editado por $lockedBy."),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Aceptar"),
-        ),
-      ],
-    ),
-  );
-}
-*/
-
-/*
-Future<void> _save() async {
-  //final result = await widget.controller.save();
-  await widget.controller.save(() async {
-  final result = await widget.controller.saveLocal(); // ← tu método viejo
-      await _handleSaveResult(result);
-  });
-
-  // ⭐ Conflicto de concurrencia
-  if (result["conflict"] == true) {
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Conflicto de edición"),
-        content: const Text(
-          "Otro usuario modificó este registro.\n"
-          "Debes recargar antes de continuar.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Aceptar"),
-          ),
-        ],
-      ),
-    );
-
-    // ⭐ Actualizar RowVersion local
-    widget.controller.rowVersion = result["currentRowVersion"];
-
-    // ⭐ Recargar datos
-    await widget.controller.loadRecord();
-
-    setState(() {
-      widget.controller.mode = FormMode.view;
-    });
-
-    return;
-  }
-
-  // ⭐ Guardado exitoso
-  setState(() {
-    widget.controller.mode = FormMode.view;
-    widget.controller.markAllClean();
-  });
-}
-
-*/
-
 Future<void> _save() async {
   // Llamamos al flujo unificado: FormEditingController.save → DynamicFormController.saveToBackend
   final SaveResult result = await widget.controller.save(
@@ -597,27 +555,6 @@ Future<void> _save() async {
   });
 }
 
-/*
-Future<void> _handleSaveResult(Map<String, dynamic> result) async {
-  if (result["conflict"] == true) {
-    await _showConflictDialog();
-
-    widget.controller.rowVersion = result["currentRowVersion"];
-    await widget.controller.loadRecord();
-
-    setState(() {
-      widget.controller.mode = FormMode.view;
-    });
-
-    return;
-  }
-
-  setState(() {
-    widget.controller.mode = FormMode.view;
-    widget.controller.markAllClean();
-  });
-}
-*/
 Future<void> _showConflictDialog() async {
   await showDialog(
     context: context,
@@ -662,9 +599,13 @@ Future<void> _showConflictDialog() async {
   }
 
  bool get hasValidationErrors {
+  //print("entro a validacion errors");
   for (var field in widget.entity.fields) {
     final value = widget.controller.formData[field.name];
     final error = FieldValidator.validate(field, value);
+    //print(field.name);
+    //print(value);
+    //print(error);
     if (error != null) return true;
   }
   return false;
