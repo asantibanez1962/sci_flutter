@@ -349,23 +349,50 @@ child: OutlinedButton(
 
     );
   }
-
+/*
 // boolean
   if (field.fieldType == "boolean" || field.fieldType == "bool") {
     return BooleanField(
       label: field.label,
       value: (value ?? false) as bool,
       modified: modified,
-      enabled: isEditable,                    // ⭐ NUEVO
+      enabled:  isEditable,                    // ⭐ NUEVO
       onChanged: isEditable
           ? (v) {
               setState(() => widget.controller.formData[name] = v);
             }
          : (_){},
+        /*  validator: (v) {
+    if (v != true) return "Este campo es requerido";
+    return null;
+  },*/
+
     );
   }
 
-
+*/
+if (field.fieldType == "boolean" || field.fieldType == "bool") {
+  return FormField<bool>(
+    initialValue: value as bool?, // ⭐ puede ser null
+    validator: (v) {
+      if (v == null) return "Este campo es requerido"; // ⭐ solo null es error
+      return null;
+    },
+    builder: (state) {
+      return BooleanField(
+        label: field.label,
+        value: state.value ?? false,
+        modified: modified,
+        enabled: isEditable,
+        onChanged: (v) {
+          state.didChange(v); // ⭐ actualiza el estado del FormField
+          setState(() => widget.controller.formData[name] = v);
+        },
+        errorText: state.errorText, // ⭐ ahora sí recibe el rojo
+      );
+    },
+  );
+}
 if (field.fieldType == "text") {
     return TextFieldWidget(
       label: field.label,

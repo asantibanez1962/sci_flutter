@@ -4,54 +4,93 @@ class BooleanField extends StatelessWidget {
   final String label;
   final bool value;
   final bool modified;
+  final bool enabled;
   final ValueChanged<bool> onChanged;
-   final bool enabled;  
+  final String? errorText;
 
   const BooleanField({
     super.key,
     required this.label,
     required this.value,
     required this.modified,
-    this.enabled = true, // Valor por defecto para enabled
+    required this.enabled,
     required this.onChanged,
+    this.errorText,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: modified ? Colors.orange.shade100 : null,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: modified ? Colors.orange : Colors.grey.shade400,
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+
+    final enabledColor = onSurface;
+    final disabledColor = onSurface.withOpacity(0.38); // ⭐ igual que lookup
+
+    // ⭐ color del label según estado
+    final labelColor = errorText != null
+        ? theme.colorScheme.error
+        : (enabled ? onSurface : disabledColor);
+
+    return TextFormField(
+      enabled: enabled,
+      readOnly: true,
+      decoration: InputDecoration(
+        isDense: true,
+        errorText: errorText,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+border: OutlineInputBorder(
+  borderRadius: BorderRadius.circular(4),
+),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(4),
+          borderSide: BorderSide(color: enabledColor, width: 0.5),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, // ⭐ label alineado a la izquierda
-        children: [
-          // ⭐ Label arriba
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: modified ? Colors.orange.shade900 : Colors.black87,
-            ),
-          ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(4),
+          borderSide: BorderSide(color: disabledColor, width: 0.30),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(4),
+          borderSide: BorderSide(color: theme.colorScheme.error, width: 1.0),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(4),
+          borderSide: BorderSide(color: theme.colorScheme.error, width: 2.0),
+        ),
 
-          const SizedBox(height: 4),
+        fillColor: modified ? Colors.orange.shade100 : null,
+        filled: modified,
 
-          // ⭐ Switch debajo del label
-          Transform.scale(
-            scale: 0.75,
-            child: Switch(
-              value: value,
-              onChanged: enabled ? onChanged : null, // Deshabilita el switch si enabled es false
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
+        prefixIconConstraints:
+            const BoxConstraints(minWidth: 0, minHeight: 0),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.only(left: 4, right: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,          // ⭐ tamaño idéntico a lookup
+                  color: labelColor,     // ⭐ disabled / enabled / error
+                ),
+              ),
+              const SizedBox(width: 4),
+              Transform.scale(
+                scale: 0.85,
+                child: Checkbox(
+                  value: value,
+                  onChanged: enabled
+                      ? (v) => onChanged(v ?? false)
+                      : null,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity:
+                      const VisualDensity(horizontal: -4, vertical: -4),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
