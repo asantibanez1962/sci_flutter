@@ -32,6 +32,22 @@ class TextFieldWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Pegar dentro del build donde tengas contexto (por ejemplo en el builder del lookup)
+debugPrint('inputDecorationTheme: ${Theme.of(context).inputDecorationTheme}');
+debugPrint('textTheme.bodyMedium: ${Theme.of(context).textTheme.bodyMedium}');
+debugPrint('colorScheme.onSurface: ${Theme.of(context).colorScheme.onSurface}');
+debugPrint('colorScheme.error: ${Theme.of(context).colorScheme.error}');
+final myDeco = InputDecoration(
+  isDense: true,
+  labelText: label,
+  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+  border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+);
+final borderSide = (myDeco.border is OutlineInputBorder)
+    ? (myDeco.border as OutlineInputBorder).borderSide
+    : null;
+debugPrint('TextFormField borderSide: $borderSide');
+
     return TextFormField(
       controller: controller,
       enabled: enabled,

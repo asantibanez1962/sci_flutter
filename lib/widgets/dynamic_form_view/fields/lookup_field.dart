@@ -37,27 +37,50 @@ if (field.dataType == "lookup" && field.lookupDisplayFields != null) {
   debugPrint('Lookup builder ${field.name} mounted=${state.mounted} state.value=${state.value} external value=$value');
 // Bordes y colores (declarar aquí, antes del return)
 final theme = Theme.of(context);
-final decoTheme = theme.inputDecorationTheme;
+final onSurface = theme.colorScheme.onSurface;
 //final textStyle = theme.textTheme.bodyMedium ?? const TextStyle(fontSize: 16);
-final errorColor = theme.colorScheme.error;
+//final errorColor = theme.colorScheme.error;
 
+final disabledColor = onSurface.withAlpha((0.38 * 255).round()); // color tenue igual que Material
+final enabledColor =onSurface; //.withAlpha((1.5 * 255).round());
 
+// Asegúrate de que 'enabled' refleja el estado real (true/false)
+final isEnabled = enabled; // tu variable existente
+ // Borde normal y borde cuando está deshabilitado (igual que TextFormField)
+ /* 
+ border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: onSurface, width: 1.0)),
+  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: onSurface, width: 1.0)),
+  disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: disabledColor, width: 1.0)),
+*/
+/*// Bordes: preferir los del tema, si no, fallback igual al TextFormField
+final enabledBorder = deco.enabledBorder ??
+    OutlineInputBorder(
+      borderRadius: BorderRadius.circular(4),
+      borderSide: BorderSide(
+        color: theme.colorScheme.onSurface,
+        width: 1.0,
+      ),
+    );
+  final focusedBorder: isEnabled
+      ? (state.hasError
+          ? OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: theme.colorScheme.error, width: 2.0))
+          : OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: theme.colorScheme.primary, width: 2.0)))
+      : null,
 
-// Bordes: preferir los del tema si existen, sino fallback con anchos iguales a TextFormField
-final enabledBorder = OutlineInputBorder(
-  borderRadius: BorderRadius.circular(4),
-  borderSide: BorderSide(
-    color: theme.colorScheme.onSurface.withValues(alpha: 0.38),
-    width: 1.0,
-  ),
-);
+final errorBorder = deco.errorBorder ??
+    OutlineInputBorder(
+      borderRadius: BorderRadius.circular(4),
+      borderSide: BorderSide(color: errorColor, width: 1.0),
+    );
+final focusedErrorBorder = deco.focusedErrorBorder ??
+    OutlineInputBorder(
+      borderRadius: BorderRadius.circular(4),
+      borderSide: BorderSide(color: errorColor, width: 2.0),
+    );
+*/
+final displayText = lookupMap[state.value] ?? '';
+final displayTextStyle = const TextStyle(fontSize: 13); // igual que tu TextFormField
 
-final focusedBorder = decoTheme.focusedBorder ??
-    OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: theme.colorScheme.primary, width: 2.0));
-final errorBorder = decoTheme.errorBorder ??
-    OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: errorColor, width: 1.0));
-final focusedErrorBorder = decoTheme.focusedErrorBorder ??
-    OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: errorColor, width: 2.0));
 
   if (state.value != value) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -72,10 +95,12 @@ final focusedErrorBorder = decoTheme.focusedErrorBorder ??
       }
     });
   }
-
-
-      final displayText = lookupMap[state.value] ?? '';
-      final displayTextStyle = const TextStyle(fontSize: 13); // coincide con tu TextFormField
+/*
+debugPrint('deco.enabledBorder: ${deco.enabledBorder}');
+debugPrint('deco.contentPadding: ${deco.contentPadding}');
+debugPrint('displayTextStyle: ${displayTextStyle}');
+debugPrint('colorScheme.onSurface: ${theme.colorScheme.onSurface}');
+*/
 
 
       return Column(
@@ -85,7 +110,7 @@ final focusedErrorBorder = decoTheme.focusedErrorBorder ??
             children: [
               Expanded(
                 child: InkWell(
-                  onTap: enabled
+                  onTap: isEnabled
                       ? () async {
                           final rows = await loadDialogRows();
                           final selected = await showDialog(
@@ -103,30 +128,41 @@ final focusedErrorBorder = decoTheme.focusedErrorBorder ??
                         }
                       : null,
                   child: InputDecorator(
-                    
+                     isEmpty: displayText.isEmpty,
+
                     decoration: InputDecoration(
                       isDense: true,
+                      enabled: isEnabled,
                       labelText: field.label,
-                      labelStyle: const TextStyle(fontSize: 13),
+                       labelStyle: TextStyle(fontSize: 13, color: isEnabled ? null : disabledColor),
                       errorText: state.errorText,
                       errorStyle: const TextStyle(fontSize: 11),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                       //border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
-                      border: decoTheme.border ?? enabledBorder,
-                  enabledBorder: enabledBorder,
-                  // si hay error, forzamos el focusedBorder a focusedErrorBorder para que el rojo tenga el mismo grosor
-    focusedBorder: state.hasError ? focusedErrorBorder : focusedBorder,
-    errorBorder: errorBorder,
-    focusedErrorBorder: focusedErrorBorder,
+ // Borde normal y borde cuando está deshabilitado (igual que TextFormField)
+  border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: onSurface, width: 1.0)),
+  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: enabledColor, width: 1.0)),
+  disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: disabledColor, width: 0.30)),
+
+  focusedBorder: isEnabled
+      ? (state.hasError
+          ? OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: theme.colorScheme.error, width: 2.0))
+          : OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: theme.colorScheme.primary, width: 2.0)))
+      : null,
+
+  errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: theme.colorScheme.error, width: 1.0)),
+  focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: theme.colorScheme.error, width: 2.0)),
+
 
                       fillColor: isModified ? Colors.orange.shade100 : null,
-                      filled: isModified,
+    filled: isModified,// ? true : deco.filled ?? false,
+
                     ),
                       child: Align(
     alignment: Alignment.centerLeft,
     child: Text(
       displayText,
-      style: displayTextStyle, // mismo tamaño y peso que TextFormField
+      style: displayTextStyle.copyWith(color: isEnabled ? onSurface : disabledColor),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     ),
