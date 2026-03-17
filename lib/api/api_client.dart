@@ -125,10 +125,10 @@ Future<Map<String, dynamic>> saveData(
       ? '$baseUrl/data/$entity'
       : '$baseUrl/data/$entity/$id';
 
-  //debugPrint("➡️ saveData() INICIO");
-  ///debugPrint("URL: $url");
-  //debugPrint("DATA: ${jsonEncode(data)}");
- //debugPrint(jsonEncode(data));
+  debugPrint("➡️ saveData() INICIO");
+  debugPrint("URL: $url");
+  debugPrint("DATA: ${jsonEncode(data)}");
+  debugPrint(jsonEncode(data));
 
   final response = await (id == null
       ? http.post(
@@ -142,8 +142,8 @@ Future<Map<String, dynamic>> saveData(
           body: jsonEncode(data),
         ));
 
-  //debugPrint("⬅️ saveData() RESPONSE STATUS: ${response.statusCode}");
-  //debugPrint("⬅️ saveData() RESPONSE BODY RAW: '${response.body}'");
+  debugPrint("⬅️ saveData() RESPONSE STATUS: ${response.statusCode}");
+  debugPrint("⬅️ saveData() RESPONSE BODY RAW: '${response.body}'");
 
   if (response.statusCode != 200) {
     throw Exception('Error al guardar datos: ${response.body}');

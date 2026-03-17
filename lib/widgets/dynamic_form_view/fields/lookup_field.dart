@@ -28,13 +28,13 @@ if (field.dataType == "lookup" && field.lookupDisplayFields != null) {
   return FormField<dynamic>(
     initialValue: value,
     validator: (v) {
-      debugPrint('Validando lookup ${field.name} -> $v');
+      //debugPrint('Validando lookup ${field.name} -> $v');
       return FieldValidator.validate(field, v);
     },
     builder: (state) {
         // Sincronizar state.value con el value externo si difieren
         // Debug: ver estado inicial del FormField
-  debugPrint('Lookup builder ${field.name} mounted=${state.mounted} state.value=${state.value} external value=$value');
+  //debugPrint('Lookup builder ${field.name} mounted=${state.mounted} state.value=${state.value} external value=$value');
 // Bordes y colores (declarar aquí, antes del return)
 final theme = Theme.of(context);
 final onSurface = theme.colorScheme.onSurface;
@@ -85,13 +85,13 @@ final displayTextStyle = const TextStyle(fontSize: 13); // igual que tu TextForm
   if (state.value != value) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (state.mounted) {
-        debugPrint('  -> sincronizando antes de state.didChange(${value}) para ${field.name}');
+    //    debugPrint('  -> sincronizando antes de state.didChange(${value}) para ${field.name}');
         state.didChange(value);
          // Pedimos al padre que valide ahora que el FormField está sincronizado
         requestValidation?.call();
-        debugPrint('  -> después de didChange para ${field.name}');
+      //  debugPrint('  -> después de didChange para ${field.name}');
 
-        debugPrint('  -> requestValidation llamada para ${field.name}');
+     //   debugPrint('  -> requestValidation llamada para ${field.name}');
       }
     });
   }

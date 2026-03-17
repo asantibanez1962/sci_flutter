@@ -7,6 +7,7 @@ import '../../models/save_result.dart';
 
 class FormEditingController extends ChangeNotifier {
   FormMode mode = FormMode.view;
+  FormMode originalmode= FormMode.view;
   Timer? _lockRefreshTimer;
   bool hasLock = false;
 
@@ -30,6 +31,7 @@ class FormEditingController extends ChangeNotifier {
   // START EDITING
   // -----------------------------
   Future<void> startEditing() async {
+    print("entro a star editing en mixing del form controller");
     final result = await acquireLock();
 
     if (!result.success) {

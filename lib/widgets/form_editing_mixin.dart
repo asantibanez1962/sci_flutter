@@ -30,7 +30,7 @@ mixin FormEditingMixin<T extends StatefulWidget> on State<T> {
   // START EDITING
   // -----------------------------------------
   Future<void> startEditing() async {
-    debugPrint("entro a star editing en mixing");
+    print("entro a star editing en mixing");
     final result = await acquireLock();
 
     if (!result.success) {

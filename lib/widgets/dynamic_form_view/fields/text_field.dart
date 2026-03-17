@@ -33,10 +33,10 @@ class TextFieldWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Pegar dentro del build donde tengas contexto (por ejemplo en el builder del lookup)
-debugPrint('inputDecorationTheme: ${Theme.of(context).inputDecorationTheme}');
+/*debugPrint('inputDecorationTheme: ${Theme.of(context).inputDecorationTheme}');
 debugPrint('textTheme.bodyMedium: ${Theme.of(context).textTheme.bodyMedium}');
 debugPrint('colorScheme.onSurface: ${Theme.of(context).colorScheme.onSurface}');
-debugPrint('colorScheme.error: ${Theme.of(context).colorScheme.error}');
+debugPrint('colorScheme.error: ${Theme.of(context).colorScheme.error}');*/
 final myDeco = InputDecoration(
   isDense: true,
   labelText: label,
@@ -46,7 +46,7 @@ final myDeco = InputDecoration(
 final borderSide = (myDeco.border is OutlineInputBorder)
     ? (myDeco.border as OutlineInputBorder).borderSide
     : null;
-debugPrint('TextFormField borderSide: $borderSide');
+//debugPrint('TextFormField borderSide: $borderSide');
 
     return TextFormField(
       controller: controller,
@@ -87,7 +87,7 @@ debugPrint('TextFormField borderSide: $borderSide');
       onChanged: onChanged,
       validator: (v) {
         if (field == null) return null;
-         debugPrint('Validando ${field!.name} -> value="$v"');
+        // debugPrint('Validando ${field!.name} -> value="$v"');
         return FieldValidator.validate(field!, v);
       },
     );
