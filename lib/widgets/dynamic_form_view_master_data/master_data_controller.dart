@@ -15,10 +15,15 @@ class MasterDataController extends ChangeNotifier {
   // ---------------------------------------------
   // VALIDACIÓN GLOBAL
   // ---------------------------------------------
-  bool get isValid {
-    if (tabIsValid.isEmpty) return false;
-    return tabIsValid.values.every((v) => v == true);
-  }
+ bool get isValid {
+  //print("MasterDataController → formController.hasValidationErrors = ${formController.hasValidationErrorsFor}");
+  if (tabIsValid.isEmpty) return false;
+
+  final tabsOk = tabIsValid.values.every((v) => v == true);
+  //final formOk = !formController.hasValidationErrors;
+
+  return tabsOk; //&& formOk;
+}
 
   void updateTabValidation(String tabKey, bool isValid) {
     tabIsValid[tabKey] = isValid;
@@ -54,12 +59,12 @@ class MasterDataController extends ChangeNotifier {
   // ---------------------------------------------
   // MODO GLOBAL
   // ---------------------------------------------
-  void startEditing() async {
+  Future<void> startEditing() async {
     await formController.startEditing();
     notifyListeners();
   }
 
-  void cancelEditing() async {
+  Future<void> cancelEditing() async {
     await formController.cancelEditing();
     notifyListeners();
   }
@@ -80,4 +85,6 @@ class MasterDataController extends ChangeNotifier {
 
     return false;
   }
+
+  
 }

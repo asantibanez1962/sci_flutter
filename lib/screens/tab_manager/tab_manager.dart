@@ -11,7 +11,7 @@ import '../../services/tab_persistence.dart';
 import '../../widgets/dynamic_form_view/dynamic_form_view.dart';
 import '../../widgets/dynamic_form_view/dynamic_form_controller.dart';
 import '../../widgets/dynamic_form_view_master_data/dynamic_form_view_master_data.dart';
-import '../../widgets/dynamic_list_view/dynamic_list_controller.dart';
+//import '../../widgets/dynamic_list_view/dynamic_list_controller.dart';
 import '../entities_screen.dart';
 import '../entity_data_screen.dart';
 import 'tab_icons.dart';
@@ -404,7 +404,7 @@ controller.acquireLock = () => widget.api.lockRecord(
           controller.entityName,
           controller.recordId!,
         );
-        
+
     tabs.add(
       TabItem(
         id: tabId,

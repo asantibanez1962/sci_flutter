@@ -43,7 +43,7 @@ class DynamicFormView extends StatefulWidget {
   final bool isSubForm;
   final void Function(bool hasErrors)? onValidationChanged;
   final void Function(String field, dynamic value)? onValueChanged;
-
+  final FormMode? externalMode;
   const DynamicFormView({
     super.key,
     required this.api,
@@ -58,6 +58,7 @@ class DynamicFormView extends StatefulWidget {
     this.customContentBuilder,
     this.sections,
     this.isSubForm = false,
+    this.externalMode,
     this.onValidationChanged,
     this.onValueChanged,
   });
@@ -87,6 +88,9 @@ class DynamicFormViewState extends State<DynamicFormView>
     if (widget.controller.mode == FormMode.create) {
       debugPrint("cambio modo de create a edit");
       widget.controller.mode = FormMode.edit;
+    }
+   if (widget.externalMode != null) {
+      widget.controller.mode = widget.externalMode!;
     }
 
     sessionId = const Uuid().v4();
@@ -153,6 +157,7 @@ class DynamicFormViewState extends State<DynamicFormView>
   Widget build(BuildContext context) {
     super.build(context);
 
+    debugPrint("DFV(${widget.entity.name}) externalMode=${widget.externalMode} controllerMode=${widget.controller.mode}");
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.isSubForm && widget.onValidationChanged != null) {
         widget.onValidationChanged!(hasValidationErrors);
@@ -217,8 +222,8 @@ class DynamicFormViewState extends State<DynamicFormView>
         ? _getFieldsForTab(widget.sections!, allFields)
         : fieldsToShow;
 
-    debugPrint("modo:");
-    debugPrint(widget.controller.mode.toString());
+    //debugPrint("modo:");
+    //debugPrint(widget.controller.mode.toString());
 
     return Padding(
       padding: const EdgeInsets.all(12),
@@ -312,7 +317,11 @@ class DynamicFormViewState extends State<DynamicFormView>
     final value = widget.controller.formData[name];
     final modified = widget.controller.isModified(name);
     final error = FieldValidator.validate(field, value);
-    final isEditable = (widget.controller.mode == FormMode.edit);
+    //final isEditable = (widget.controller.mode == FormMode.edit);
+    //final isEditable = widget.externalMode == FormMode.edit;
+    final isEditable = widget.externalMode != null
+        ? widget.externalMode == FormMode.edit
+        : widget.controller.mode == FormMode.edit;
 
     if (field.dataType == "lookup" && !widget.controller.lookupsLoaded) {
       return const Center(child: CircularProgressIndicator());
@@ -331,6 +340,9 @@ class DynamicFormViewState extends State<DynamicFormView>
             ? (v) {
                 setState(() => widget.controller.formData[name] = v);
                 widget.onValueChanged?.call(name, v);
+                widget.onValidationChanged?.call(hasValidationErrors);
+                print("lookup oDFV(${widget.entity.name}) → onChanged → hasErrors = $hasValidationErrors");
+
               }
             : (_) {},
         loadDialogRows: () async {
@@ -365,6 +377,9 @@ class DynamicFormViewState extends State<DynamicFormView>
               state.didChange(v);
               setState(() => widget.controller.formData[name] = v);
               widget.onValueChanged?.call(name, v);
+              //widget.onValidationChanged?.call(hasValidationErrors);
+              //print("build oDFV(${widget.entity.name}) → onChanged → hasErrors = $hasValidationErrors");
+
             },
             errorText: state.errorText,
           );
@@ -382,10 +397,15 @@ class DynamicFormViewState extends State<DynamicFormView>
         autovalidateMode: AutovalidateMode.always,
         onChanged: isEditable
             ? (v) {
+               // debugPrint("on changed text");
                 setState(() {
                   widget.controller.formData[name] = v;
                 });
                 widget.onValueChanged?.call(name, v);
+                // ⭐ Notificar validación global
+                //widget.onValidationChanged?.call(hasValidationErrors);
+                //debugPrint("text oDFV(${widget.entity.name}) → onChanged → hasErrors = $hasValidationErrors");
+
                 debugPrint(
                     'Field onChanged controller=${widget.controller.hashCode} field=$name value=$v');
               }
@@ -403,6 +423,9 @@ class DynamicFormViewState extends State<DynamicFormView>
             ? (v) {
                 setState(() => widget.controller.formData[name] = v);
                 widget.onValueChanged?.call(name, v);
+               // widget.onValidationChanged?.call(hasValidationErrors);
+                //print("number oDFV(${widget.entity.name}) → onChanged → hasErrors = $hasValidationErrors");
+
               }
             : (_) {},
       );
@@ -417,8 +440,12 @@ class DynamicFormViewState extends State<DynamicFormView>
         enabled: isEditable,
         onChanged: isEditable
             ? (iso) {
+             // print("on changed");
                 setState(() => widget.controller.formData[name] = iso);
                 widget.onValueChanged?.call(name, iso);
+                //widget.onValidationChanged?.call(hasValidationErrors);
+               // print("dateoDFV(${widget.entity.name}) → onChanged → hasErrors = $hasValidationErrors");
+
               }
             : null,
       );
@@ -434,6 +461,9 @@ class DynamicFormViewState extends State<DynamicFormView>
             ? (v) {
                 setState(() => widget.controller.formData[name] = v);
                 widget.onValueChanged?.call(name, v);
+              //  widget.onValidationChanged?.call(hasValidationErrors);
+              //  print("auto DFV(${widget.entity.name}) → onChanged → hasErrors = $hasValidationErrors");
+
               }
             : (_) {},
       );
@@ -491,6 +521,7 @@ class DynamicFormViewState extends State<DynamicFormView>
     return allFields.where((f) => fieldNamesInTab.contains(f.name)).toList();
   }
 
+
   Future<bool> handleExternalClose() async {
     final ok = await attemptClose();
     if (!ok) return false;
@@ -502,11 +533,17 @@ class DynamicFormViewState extends State<DynamicFormView>
     return true;
   }
 
+void revalidate() {
+  final hasErrors = hasValidationErrors;
+  widget.onValidationChanged?.call(hasErrors);
+  //print("DFV(${widget.entity.name}) → revalidate() = $hasErrors");
+}
+
   Future<void> _save() async {
     final SaveResult result = await widget.controller.save(
       () => widget.controller.saveToBackend(),
     );
-    print("save");
+    //print("save");
     /*
       // 🔥 Si ya existe un ID real, restaurar el acquireLock REAL
         if (widget.controller.recordId != null &&
@@ -615,6 +652,7 @@ class DynamicFormViewState extends State<DynamicFormView>
     if (widget.controller.mode == FormMode.create) {
       return true;
     }
+
 
     if (hasValidationErrors) {
       await showDialog(

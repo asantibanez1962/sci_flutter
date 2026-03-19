@@ -37,6 +37,7 @@ class TextFieldWidget extends StatelessWidget {
 debugPrint('textTheme.bodyMedium: ${Theme.of(context).textTheme.bodyMedium}');
 debugPrint('colorScheme.onSurface: ${Theme.of(context).colorScheme.onSurface}');
 debugPrint('colorScheme.error: ${Theme.of(context).colorScheme.error}');*/
+
 final myDeco = InputDecoration(
   isDense: true,
   labelText: label,
@@ -85,11 +86,11 @@ final borderSide = (myDeco.border is OutlineInputBorder)
         ), // ⭐ Evita que el ícono agrande el campo
       ),
       onChanged: onChanged,
-      validator: (v) {
+      /*validator: (v) {
         if (field == null) return null;
         // debugPrint('Validando ${field!.name} -> value="$v"');
         return FieldValidator.validate(field!, v);
-      },
+      },*/
     );
   }
   

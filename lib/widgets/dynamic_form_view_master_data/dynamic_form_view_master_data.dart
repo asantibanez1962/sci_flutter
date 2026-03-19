@@ -4,7 +4,6 @@ import 'package:uuid/uuid.dart';
 import '../../../api/api_client.dart';
 import '../../../models/entity_definition.dart';
 import '../../../models/field_definition.dart';
-//import '../../../models/form_mode.dart';
 
 import '../dynamic_form_view/dynamic_form_view.dart';
 import '../dynamic_form_view/dynamic_form_controller.dart';
@@ -14,8 +13,9 @@ import '../../../models/master_data/form_metadata_master_data.dart';
 import '../../../models/master_data/form_tab_master_data.dart';
 import '../../../models/master_data/form_section_master_data.dart';
 import '../../../models/master_data/form_detail_master_data.dart';
-
+import '../../widgets/dynamic_form_view/ui/unsaved_banner.dart';
 import 'master_data_controller.dart';
+import '../../models/form_mode.dart';
 
 class DynamicFormViewMasterData extends StatefulWidget {
   final FormMetadataMasterData metadata;
@@ -55,6 +55,9 @@ class _DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
   final Map<String, GlobalKey<DynamicFormViewState>> _formKeys = {};
 
   late FormTabMasterData masterTab;
+
+  // ⭐ MODO GLOBAL
+  FormMode mode = FormMode.view;
 
   @override
   void initState() {
@@ -112,11 +115,46 @@ class _DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
   }
 
   // ---------------------------------------------
+  // EDIT MODE
+  // ---------------------------------------------
+  Future<void> _enterEditMode() async {
+    await master.startEditing();
+    setState(() => mode = FormMode.edit);
+
+    // ⭐ Propagar modo a todos los subforms
+    for (final key in _formKeys.values) {
+      key.currentState?.setExternalMode(FormMode.edit);
+      key.currentState?.revalidate();   // ⭐ AGREGADO
+
+    }
+  }
+
+  Future<void> _cancelEdit() async {
+    await master.cancelEditing();
+    setState(() => mode = FormMode.view);
+
+    // ⭐ Propagar modo a todos los subforms
+    for (final key in _formKeys.values) {
+      key.currentState?.setExternalMode(FormMode.view);
+       key.currentState?.revalidate();   // ⭐ AGREGADO
+
+    }
+  }
+
+  // ---------------------------------------------
   // GUARDAR GLOBAL
   // ---------------------------------------------
   Future<void> _saveMaster() async {
     final ok = await master.saveMaster();
     if (ok) {
+      setState(() => mode = FormMode.view);
+
+      for (final key in _formKeys.values) {
+        key.currentState?.setExternalMode(FormMode.view);
+         key.currentState?.revalidate();   // ⭐ AGREGADO
+
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Guardado correctamente")),
       );
@@ -126,48 +164,77 @@ class _DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
   // ---------------------------------------------
   // UI
   // ---------------------------------------------
-  @override
-  Widget build(BuildContext context) {
-    final tabs = [...widget.metadata.tabs]
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+@override
+Widget build(BuildContext context) {
+ // print("MasterDataForm → build() isValid=${master.isValid}");
+  final tabs = [...widget.metadata.tabs]
+    ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.metadata.displayName),
-        actions: [
-          ElevatedButton(
-            onPressed: master.isValid ? _saveMaster : null,
-            child: const Text("Guardar"),
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(widget.metadata.displayName),
+      actions: [
+        if (mode == FormMode.view)
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: _enterEditMode,
           ),
-          const SizedBox(width: 12),
-        ],
+
+        if (mode == FormMode.edit)
+          AnimatedBuilder(
+            animation: master,
+            builder: (context,_) {
+              return ElevatedButton(
+                onPressed: master.isValid ? _saveMaster : null,
+                child: const Text("Guardar"),
+           );
+          }
+          ),
+
+        if (mode == FormMode.edit)
+          TextButton(
+            onPressed: _cancelEdit,
+            child: const Text("Cancelar"),
+          ),
+
+        const SizedBox(width: 12),
+      ],
+    ),
+    body: Column(
+      children: [
+         if (master.hasUnsavedChanges)
+      const Padding(
+        padding: EdgeInsets.all(8),
+        child: UnsavedChangesBanner(),
       ),
-      body: Column(
-        children: [
-          TabBar(
+
+        TabBar(
+          controller: tabController,
+          isScrollable: true,
+          labelColor: Colors.blueGrey.shade900,
+          unselectedLabelColor: Colors.black54,
+          indicatorColor: Colors.blueGrey.shade900,
+          tabs: tabs.map((t) => Tab(text: t.title)).toList(),
+        ),
+        Expanded(
+          child: TabBarView(
             controller: tabController,
-            isScrollable: true,
-            labelColor: Colors.blueGrey.shade900,
-            unselectedLabelColor: Colors.black54,
-            indicatorColor: Colors.blueGrey.shade900,
-            tabs: tabs.map((t) => Tab(text: t.title)).toList(),
+            children: tabs.map((tab) {
+              return Padding(
+                padding: const EdgeInsets.all(8),
+                child: _buildTabContent(tab),
+              );
+            }).toList(),
           ),
-          Expanded(
-            child: TabBarView(
-              controller: tabController,
-              children: tabs.map((tab) {
-                return Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: _buildTabContent(tab),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
+    // ---------------------------------------------
+  // TAB CONTENT
+  // ---------------------------------------------
   Widget _buildTabContent(FormTabMasterData tab) {
     switch (tab.tabType) {
       case 'form':
@@ -191,13 +258,13 @@ class _DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     final visibleFields = fieldDetails.map((d) => d.fieldName!).toList();
-
-    final key = GlobalKey<DynamicFormViewState>();
-    _formKeys[tab.key] = key;
+    final tabkey = "${widget.entity.name}.${tab.key}";
+    final formkey = GlobalKey<DynamicFormViewState>();
+    _formKeys[tabkey] = formkey;
 
     return DynamicFormView(
       controller: widget.controller,
-      key: key,
+      key: formkey,
       api: widget.api,
       entity: widget.entity,
       initialData: widget.data,
@@ -205,14 +272,21 @@ class _DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
       sections: tab.sections,
       isSubForm: true,
 
+      // ⭐ PASAMOS EL MODO GLOBAL
+      externalMode: mode,
+
       // VALIDACIÓN GLOBAL
       onValidationChanged: (hasErrors) {
-        master.updateTabValidation(tab.key, !hasErrors);
+        // print("MASTER → onValidationChanged(tab=$tabkey, hasErrors=$hasErrors)");
+        master.updateTabValidation(tabkey, !hasErrors);
+        //master.updateTabValidation(tab.key, !hasErrors);
+        
       },
 
       // SINCRONIZACIÓN GLOBAL DE VALORES
       onValueChanged: (field, value) {
-        master.updateValue(field, value);
+              //   print("MASTER → onValueChanged(tab=$tabkey, $field $value)");
+                                        master.updateValue(field, value);
       },
 
       onClose: () async {
@@ -274,8 +348,7 @@ class _DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
       onCreate: () => _openChildPopup(listDetail, childEntity, null),
     );
   }
-
-  // ---------------------------------------------
+    // ---------------------------------------------
   // POPUP HIJO
   // ---------------------------------------------
   Future<void> _openChildPopup(
@@ -369,4 +442,28 @@ class _DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
       },
     );
   }
+
+  Future<bool> _confirmExit() async {
+  if (!master.hasUnsavedChanges) return true;
+
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text("Cambios sin guardar"),
+      content: const Text("Hay cambios sin guardar. ¿Desea salir sin guardar?"),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text("Cancelar"),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text("Salir"),
+        ),
+      ],
+    ),
+  );
+
+  return result ?? false;
+}
 }

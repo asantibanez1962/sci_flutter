@@ -9,6 +9,7 @@ import '../../models/form_mode.dart';
 import '../dynamic_form_view_master_data/form_edition_controller.dart';
 import '../../models/save_result.dart';
 import 'package:uuid/uuid.dart';
+import 'validation/field_validator.dart';
 
 class DynamicFormController extends FormEditingController {
   final ApiClient api;
@@ -337,6 +338,15 @@ if (result["success"] == true) {
 return SaveResult(success: false, conflict: false);
 
  }
+
+bool get hasValidationErrors {
+  for (var field in entity.fields) {
+    final value = formData[field.name];
+    final error = FieldValidator.validate(field, value);
+    if (error != null) return true;
+  }
+  return false;
+}
 
   void markAllClean() {
     originalData = Map<String, dynamic>.from(formData);
