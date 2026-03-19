@@ -41,10 +41,10 @@ class DynamicFormViewMasterData extends StatefulWidget {
 
   @override
   State<DynamicFormViewMasterData> createState() =>
-      _DynamicFormViewMasterDataState();
+      DynamicFormViewMasterDataState();
 }
 
-class _DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
+class DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
     with TickerProviderStateMixin {
   late TabController tabController;
 
@@ -166,72 +166,98 @@ class _DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
   // ---------------------------------------------
 @override
 Widget build(BuildContext context) {
- // print("MasterDataForm → build() isValid=${master.isValid}");
   final tabs = [...widget.metadata.tabs]
     ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
-  return Scaffold(
-    appBar: AppBar(
-      title: Text(widget.metadata.displayName),
-      actions: [
-        if (mode == FormMode.view)
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _enterEditMode,
-          ),
+  return PopScope(
+    canPop: !master.hasUnsavedChanges,
+    onPopInvokedWithResult: (didPop, result) async {
+       print("🔵 PopScope → onPopInvokedWithResult fired");
+      print("   didPop=$didPop result=$result");
+    print("   master.hasUnsavedChanges=${master.hasUnsavedChanges}");
 
-        if (mode == FormMode.edit)
-          AnimatedBuilder(
-            animation: master,
-            builder: (context,_) {
-              return ElevatedButton(
-                onPressed: master.isValid ? _saveMaster : null,
-                child: const Text("Guardar"),
-           );
-          }
-          ),
+     if (didPop) {
+      print("🔵 PopScope → didPop=true → Flutter ya hizo pop");
+      return;
+    }
 
-        if (mode == FormMode.edit)
-          TextButton(
-            onPressed: _cancelEdit,
-            child: const Text("Cancelar"),
-          ),
 
-        const SizedBox(width: 12),
-      ],
-    ),
-    body: Column(
-      children: [
-         if (master.hasUnsavedChanges)
-      const Padding(
-        padding: EdgeInsets.all(8),
-        child: UnsavedChangesBanner(),
+      final ok = await attemptClose();
+        print("🔵 PopScope → attemptClose() returned $ok");
+
+
+      if (ok) {
+      print("🔵 PopScope → Navigator.pop()");
+      Navigator.pop(context);
+    } else {
+      print("🔵 PopScope → Cancelled exit");
+    }
+
+    },
+    child: Scaffold(
+      appBar: AppBar(
+        title: Text(widget.metadata.displayName),
+        actions: [
+          if (mode == FormMode.view)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: _enterEditMode,
+            ),
+
+          if (mode == FormMode.edit)
+            AnimatedBuilder(
+              animation: master,
+              builder: (context, _) {
+                return ElevatedButton(
+                  onPressed: master.isValid ? _saveMaster : null,
+                  child: const Text("Guardar"),
+                );
+              },
+            ),
+
+          if (mode == FormMode.edit)
+            TextButton(
+              onPressed: _cancelEdit,
+              child: const Text("Cancelar"),
+            ),
+
+          const SizedBox(width: 12),
+        ],
       ),
 
-        TabBar(
-          controller: tabController,
-          isScrollable: true,
-          labelColor: Colors.blueGrey.shade900,
-          unselectedLabelColor: Colors.black54,
-          indicatorColor: Colors.blueGrey.shade900,
-          tabs: tabs.map((t) => Tab(text: t.title)).toList(),
-        ),
-        Expanded(
-          child: TabBarView(
+      body: Column(
+        children: [
+          if (master.hasUnsavedChanges)
+            const Padding(
+              padding: EdgeInsets.all(8),
+              child: UnsavedChangesBanner(),
+            ),
+
+          TabBar(
             controller: tabController,
-            children: tabs.map((tab) {
-              return Padding(
-                padding: const EdgeInsets.all(8),
-                child: _buildTabContent(tab),
-              );
-            }).toList(),
+            isScrollable: true,
+            labelColor: Colors.blueGrey.shade900,
+            unselectedLabelColor: Colors.black54,
+            indicatorColor: Colors.blueGrey.shade900,
+            tabs: tabs.map((t) => Tab(text: t.title)).toList(),
           ),
-        ),
-      ],
+
+          Expanded(
+            child: TabBarView(
+              controller: tabController,
+              children: tabs.map((tab) {
+                return Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: _buildTabContent(tab),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
-
     // ---------------------------------------------
   // TAB CONTENT
   // ---------------------------------------------
@@ -443,7 +469,46 @@ Widget build(BuildContext context) {
     );
   }
 
-  Future<bool> _confirmExit() async {
+
+Future<bool> attemptClose() async {
+  // 1) Si no hay cambios → salir directo
+  print("🟣 attemptClose() ejecutado en MasterData");
+  if (!master.hasUnsavedChanges) return true;
+
+  // 2) Preguntar si quiere salir (aunque haya errores)
+  final exit = await _confirmExit();
+  if (!exit) return false;
+
+  // 3) Si el master NO es válido → advertir, pero permitir salir
+  if (!master.isValid) {
+    final force = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Errores en el formulario"),
+        content: const Text(
+          "El formulario tiene errores. Si sale ahora, perderá los cambios.\n\n¿Desea salir de todos modos?"
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancelar"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Salir"),
+          ),
+        ],
+      ),
+    );
+
+    return force ?? false;
+  }
+
+  // 4) Si no hay errores → salir normal
+  return true;
+}
+
+Future<bool> _confirmExit() async {
   if (!master.hasUnsavedChanges) return true;
 
   final result = await showDialog<bool>(
@@ -466,4 +531,5 @@ Widget build(BuildContext context) {
 
   return result ?? false;
 }
+
 }

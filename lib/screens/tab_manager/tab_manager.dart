@@ -226,7 +226,8 @@ class _TabManagerState extends State<TabManager>
     FormMetadataMasterData metadata,
   ) {
     final tabId = "edit_${entity.name}_${row[entity.primaryKey]}";
-
+    //final formKey = GlobalKey<DynamicFormViewState>();
+    final formKey = GlobalKey<DynamicFormViewMasterDataState>();
     final controller = DynamicFormController(
       api: widget.api,
       entity: entity,
@@ -270,8 +271,18 @@ class _TabManagerState extends State<TabManager>
         color: tabColor(TabType.edit),
         controller: controller,
         closable: true,
-        onRequestClose: () async => true,
+  //      onRequestClose: () async => true,
+        onRequestClose: () async {
+           print("🟥 TabItem.onRequestClose ejecutado");
+
+            final ok = await formKey.currentState?.attemptClose() ?? true;
+            print("🟥 TabItem.onRequestClose → attemptClose=$ok");
+
+          return ok;
+},
         builder: () {
+          print("🟦 TabItem.builder ejecutado");
+
           return TabViewWrapper(
             child: DynamicFormViewMasterData(
               metadata: metadata,
@@ -280,7 +291,10 @@ class _TabManagerState extends State<TabManager>
               entity: entity,
               entityMap: entityMap,
               controller: controller,
+              key: formKey,
               onClose: () async {
+                 print("🟦 DynamicFormViewMasterData.onClose ejecutado");
+
                 try {
                   await controller.cancelEditing();
                 } catch (_) {}
@@ -290,7 +304,13 @@ class _TabManagerState extends State<TabManager>
 
                 setState(() {});
               },
-              onRequestClose: () async => true,
+             onRequestClose: () async {
+                print("🟥 TabItem.onRequestClose ejecutado");
+                print("🟥 formKey.currentState = ${formKey.currentState}");
+                final ok = await formKey.currentState?.attemptClose() ?? true;
+                print("🟥 TabItem.onRequestClose → attemptClose=$ok");
+                return ok;
+                  },
             ),
           );
         },

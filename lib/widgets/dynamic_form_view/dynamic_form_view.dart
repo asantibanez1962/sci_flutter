@@ -647,37 +647,46 @@ void revalidate() {
   }
 
   Future<bool> attemptClose() async {
-    debugPrint("attemptClose de dynamic form view");
+  debugPrint("attemptClose de dynamic form view");
 
-    if (widget.controller.mode == FormMode.create) {
-      return true;
-    }
-
-
-    if (hasValidationErrors) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Errores en el formulario"),
-          content: const Text("Corrija los errores antes de cerrar."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Aceptar"),
-            ),
-          ],
-        ),
-      );
-      return false;
-    }
-
-    if (!widget.controller.hasUnsavedChanges) {
-      return true;
-    }
-
-    final confirm = await _confirmExit();
-    return confirm;
+  // 1) Si no hay cambios → salir directo
+  if (!widget.controller.hasUnsavedChanges) {
+    return true;
   }
+
+  // 2) Preguntar si quiere salir (aunque haya errores)
+  final exit = await _confirmExit();
+  if (!exit) return false;
+
+  // 3) Si hay errores → advertir, pero permitir salir
+  if (hasValidationErrors) {
+    final force = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Errores en el formulario"),
+        content: const Text(
+          "El formulario tiene errores. Si sale ahora, perderá los cambios.\n\n¿Desea salir de todos modos?"
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancelar"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Salir"),
+          ),
+        ],
+      ),
+    );
+
+    return force ?? false;
+  }
+
+  // 4) Si no hay errores → salir normal
+  return true;
+}
+
 
   String? convertDMYtoISO(String? dmy) {
     if (dmy == null || dmy.isEmpty) return null;

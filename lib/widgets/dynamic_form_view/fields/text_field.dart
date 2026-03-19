@@ -86,11 +86,11 @@ final borderSide = (myDeco.border is OutlineInputBorder)
         ), // ⭐ Evita que el ícono agrande el campo
       ),
       onChanged: onChanged,
-      /*validator: (v) {
+      validator: (v) {
         if (field == null) return null;
         // debugPrint('Validando ${field!.name} -> value="$v"');
         return FieldValidator.validate(field!, v);
-      },*/
+      },
     );
   }
   
