@@ -31,7 +31,7 @@ class FormEditingController extends ChangeNotifier {
   // START EDITING
   // -----------------------------
   Future<void> startEditing() async {
-    print("entro a star editing en mixing del form controller");
+    //print("entro a star editing en mixing del form controller");
     final result = await acquireLock();
 
     if (!result.success) {

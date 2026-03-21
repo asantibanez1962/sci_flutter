@@ -220,19 +220,23 @@ class _TabManagerState extends State<TabManager>
   // ---------------------------------------------------------
   // EDIT MASTER
   // ---------------------------------------------------------
-  void _openEditTabMaster(
+  Future<void> _openEditTabMaster(
     EntityDefinition entity,
     Map<String, dynamic> row,
     FormMetadataMasterData metadata,
-  ) {
+  ) async {
     final tabId = "edit_${entity.name}_${row[entity.primaryKey]}";
+    final id = row[entity.primaryKey];
+    final fullData = await widget.api.getFullRecord(entity.name, id);
+
     //final formKey = GlobalKey<DynamicFormViewState>();
     final formKey = GlobalKey<DynamicFormViewMasterDataState>();
     final controller = DynamicFormController(
       api: widget.api,
       entity: entity,
-      initialData: row,
+      initialData: fullData,
     );
+
 
     controller.mode = FormMode.view;
     controller.originalmode = FormMode.edit;
@@ -286,7 +290,9 @@ class _TabManagerState extends State<TabManager>
           return TabViewWrapper(
             child: DynamicFormViewMasterData(
               metadata: metadata,
-              data: row,
+              //data: row,
+              data: fullData,
+              //initialData: fullData,
               api: widget.api,
               entity: entity,
               entityMap: entityMap,
@@ -305,10 +311,10 @@ class _TabManagerState extends State<TabManager>
                 setState(() {});
               },
              onRequestClose: () async {
-                print("🟥 TabItem.onRequestClose ejecutado");
-                print("🟥 formKey.currentState = ${formKey.currentState}");
+            //    print("🟥 TabItem.onRequestClose ejecutado");
+             //   print("🟥 formKey.currentState = ${formKey.currentState}");
                 final ok = await formKey.currentState?.attemptClose() ?? true;
-                print("🟥 TabItem.onRequestClose → attemptClose=$ok");
+             //   print("🟥 TabItem.onRequestClose → attemptClose=$ok");
                 return ok;
                   },
             ),

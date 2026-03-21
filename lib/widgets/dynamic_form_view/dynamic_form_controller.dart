@@ -16,7 +16,7 @@ class DynamicFormController extends FormEditingController {
   final EntityDefinition entity;
 
   final Map<String, TextEditingController> controllers = {};
-  final Map<String, dynamic> formData = {};
+  Map<String, dynamic> formData = {};
   final Map<String, Map<int, String>> lookupData = {};
 
   bool lookupsLoaded = false;
@@ -27,6 +27,9 @@ class DynamicFormController extends FormEditingController {
 
   // ⭐ NUEVO: getter de validez global
   bool get isValid => errors.values.every((e) => e == null);
+
+
+
 
   DynamicFormController({
     required this.api,
@@ -66,6 +69,19 @@ class DynamicFormController extends FormEditingController {
       formData[name] = formData[name];
     }
   }
+
+
+void loadInitialData(Map<String, dynamic> data) {
+  formData = Map.from(data);
+  originalData = Map.from(data);
+    // 🔥 Inicializar los TextEditingController con los valores
+  data.forEach((key, value) {
+    if (controllers.containsKey(key)) {
+      controllers[key]!.text = value?.toString() ?? "";
+    }
+  });
+  
+}
 
   bool _needsController(FieldDefinition f) {
     return f.fieldType == "text" ||
@@ -205,7 +221,7 @@ class DynamicFormController extends FormEditingController {
   // SAVE TO BACKEND
   // -----------------------------
   Future<SaveResult> saveToBackend() async {
-    print("🟡 saveToBackend controller.hashCode = ${this.hashCode}");
+    //print("🟡 saveToBackend controller.hashCode = ${this.hashCode}");
 
     syncControllersToFormData();
 
@@ -243,7 +259,7 @@ class DynamicFormController extends FormEditingController {
       id: isEdit ? recordId : null,
     );
 
-    print("🟥 RESULT EN saveToBackend = $result");
+    //print("🟥 RESULT EN saveToBackend = $result");
 
 // 🔥 1. Conflicto: tu backend NO usa "conflict", así que lo detectamos por rowVersion nulo
 if (result["rowVersion"] == null) {
@@ -256,17 +272,17 @@ if (result["rowVersion"] == null) {
 
 // 🔥 2. Éxito: tu backend SIEMPRE devuelve "id" cuando guarda
 if (result["id"] != null) {
-  print("Success (insert or update)");
+  //print("Success (insert or update)");
 
   rowVersion = result["rowVersion"];
 
   if (!isEdit) {
     final newId = result["id"];
-    print("🟡 newId recibido = $newId");
+    //print("🟡 newId recibido = $newId");
 
     recordId = newId;
     this.recordId = newId;
-    print("🟡 recordId asignado = $recordId");
+   // print("🟡 recordId asignado = $recordId");
 
     payload[entity.primaryKey] = newId;
     originalData = Map<String, dynamic>.from(payload);

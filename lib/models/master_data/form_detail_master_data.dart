@@ -5,6 +5,10 @@ class FormDetailMasterData {
   final String? relatedEntity;
   final String? foreignKey;
   final int sortOrder;
+    // ⭐ NUEVOS CAMPOS NECESARIOS
+  final String? listName;
+  final String? primaryKey;
+
   final String? hint;
   final String? placeholder;
   final String? readOnlyExpression;
@@ -21,6 +25,9 @@ class FormDetailMasterData {
     this.relatedEntity,
     this.foreignKey,
     required this.sortOrder,
+    this.listName,     // ⭐
+    this.primaryKey,   // ⭐
+
     this.hint,
     this.placeholder,
     this.readOnlyExpression,
@@ -39,6 +46,10 @@ class FormDetailMasterData {
       relatedEntity: json['relatedEntity'],
       foreignKey: json['foreignKey'],
       sortOrder: json['sortOrder'] ?? 0,
+            // ⭐ LEERLOS DEL JSON
+      listName: json['listName'],
+      primaryKey: json['primaryKey'],
+
       hint: json['hint'],
       placeholder: json['placeholder'],
       readOnlyExpression: json['readOnlyExpression'],

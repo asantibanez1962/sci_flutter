@@ -76,6 +76,7 @@ class DynamicFormViewState extends State<DynamicFormView>
 
   Timer? lockRefreshTimer;
 
+
   @override
   bool get wantKeepAlive => true;
 
@@ -86,7 +87,7 @@ class DynamicFormViewState extends State<DynamicFormView>
     originalMode = widget.controller.mode;
 
     if (widget.controller.mode == FormMode.create) {
-      debugPrint("cambio modo de create a edit");
+      //debugPrint("cambio modo de create a edit");
       widget.controller.mode = FormMode.edit;
     }
    if (widget.externalMode != null) {
@@ -124,7 +125,7 @@ class DynamicFormViewState extends State<DynamicFormView>
 
   @override
   Future<LockResult> acquireLock() async {
-    debugPrint(">>> from simple: acquireLock() llamado");
+    //debugPrint(">>> from simple: acquireLock() llamado");
     final result =
         await widget.api.lockRecord(entityName, recordId, sessionId);
 
@@ -157,7 +158,7 @@ class DynamicFormViewState extends State<DynamicFormView>
   Widget build(BuildContext context) {
     super.build(context);
 
-    debugPrint("DFV(${widget.entity.name}) externalMode=${widget.externalMode} controllerMode=${widget.controller.mode}");
+    //debugPrint("DFV(${widget.entity.name}) externalMode=${widget.externalMode} controllerMode=${widget.controller.mode}");
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.isSubForm && widget.onValidationChanged != null) {
         widget.onValidationChanged!(hasValidationErrors);
@@ -261,14 +262,14 @@ class DynamicFormViewState extends State<DynamicFormView>
                       height: 36,
                       child: ElevatedButton(
                         onPressed: () async {
-                          debugPrint("🟦 BOTÓN EDITAR → PRESIONADO");
-                          debugPrint("🟣 acquireLock actual: ${widget.controller.acquireLock}");
-                          debugPrint("🟡 controller.hashCode (EDITAR) = ${widget.controller.hashCode}");
-                          debugPrint("🟡 recordId (EDITAR) = ${widget.controller.recordId}");
+                       //   debugPrint("🟦 BOTÓN EDITAR → PRESIONADO");
+                       //   debugPrint("🟣 acquireLock actual: ${widget.controller.acquireLock}");
+                      //    debugPrint("🟡 controller.hashCode (EDITAR) = ${widget.controller.hashCode}");
+                       //   debugPrint("🟡 recordId (EDITAR) = ${widget.controller.recordId}");
 
                           await widget.controller.startEditing();
-                          debugPrint(
-                              "🟦 CONTROLLER MODE DESPUÉS DE startEditing(): ${widget.controller.mode}");
+                       //   debugPrint(
+                       //       "🟦 CONTROLLER MODE DESPUÉS DE startEditing(): ${widget.controller.mode}");
                           setState(() {});
                         },
                         child: const Text(
@@ -313,8 +314,19 @@ class DynamicFormViewState extends State<DynamicFormView>
   }
 
   Widget _buildField(FieldDefinition field) {
+    //print("🟦 Field '${field.name}' → value = ${widget.controller.formData[field.name]}");
+    //print("🔧 controller.controllers contains '${field.name}'? ${widget.controller.controllers.containsKey(field.name)}");
+    //print("🔧 controller.controllers keys = ${widget.controller.controllers.keys}");
     final name = field.name;
-    final value = widget.controller.formData[name];
+    //final value = widget.controller.formData[name];
+    final key = resolveKey(widget.controller.formData, name);
+          //_normalizeKey(name);
+    final value = widget.controller.formData[key];
+    //  print("🟦 Field '$name' → key='$key' → value=$value");
+
+    //final key = _normalizeKey(name);
+    //final value = widget.controller.formData[key];
+
     final modified = widget.controller.isModified(name);
     final error = FieldValidator.validate(field, value);
     //final isEditable = (widget.controller.mode == FormMode.edit);
@@ -323,13 +335,24 @@ class DynamicFormViewState extends State<DynamicFormView>
         ? widget.externalMode == FormMode.edit
         : widget.controller.mode == FormMode.edit;
 
+    //final name = field.name;
+    //final key = _normalizeKey(name);
+    //final value = widget.controller.formData[key];
+
     if (field.dataType == "lookup" && !widget.controller.lookupsLoaded) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (field.dataType == "lookup") {
+      //final name = field.name;
+      //final key = _normalizeKey(name);
+      //final value = widget.controller.formData[key];
+
+      print("🟦 Lookup '$name' → key='$key' → value=$value");
+      print("🔍 Lookup build → key=$key → value=$value");
       final map = widget.controller.lookupData[name] ?? {};
       return LookupFieldBuilder.buildLookupField(
+        //key: ValueKey(value),
         context: context,
         field: field,
         value: value,
@@ -338,10 +361,14 @@ class DynamicFormViewState extends State<DynamicFormView>
         enabled: isEditable,
         onChanged: isEditable
             ? (v) {
-                setState(() => widget.controller.formData[name] = v);
+           //   print("🟨 onChanged lookup '$name' → newValue=$v");
+            //  print("🟨 formData BEFORE = ${widget.controller.formData}");
+                //setState(() => widget.controller.formData[name] = v);
+                setState(() => widget.controller.formData[key] = v);
+              //  print("🟨 formData AFTER = ${widget.controller.formData}");
                 widget.onValueChanged?.call(name, v);
                 widget.onValidationChanged?.call(hasValidationErrors);
-                print("lookup oDFV(${widget.entity.name}) → onChanged → hasErrors = $hasValidationErrors");
+             //   print("lookup oDFV(${widget.entity.name}) → onChanged → hasErrors = $hasValidationErrors");
 
               }
             : (_) {},
@@ -352,13 +379,19 @@ class DynamicFormViewState extends State<DynamicFormView>
           );
         },
         requestValidation: () {
-          debugPrint('Parent: requestValidation invoked from lookup $name');
+        //  debugPrint('Parent: requestValidation invoked from lookup $name');
           _formKey.currentState?.validate();
         },
       );
     }
 
     if (field.fieldType == "boolean" || field.fieldType == "bool") {
+       //final name = field.name;
+       //final key = _normalizeKey(name);
+       //final value = widget.controller.formData[key];
+
+       print("🟦 Boolean '$name' → key='$key' → value=$value");
+
       return FormField<bool>(
         initialValue: value as bool?,
         validator: (v) {
@@ -388,6 +421,16 @@ class DynamicFormViewState extends State<DynamicFormView>
     }
 
     if (field.fieldType == "text") {
+        //final name = field.name;
+        //final key = _normalizeKey(name);
+        //final value = widget.controller.formData[key];
+         print("🟦 Field '$name' → key='$key' → value=$value");
+      // 🔥 Sincronizar el TextEditingController con el valor real
+        if (widget.controller.controllers.containsKey(name)) {
+          widget.controller.controllers[name]!.text = value?.toString() ?? "";
+        }
+
+
       return TextFieldWidget(
         label: field.label,
         controller: widget.controller.controllers[name]!,
@@ -406,14 +449,26 @@ class DynamicFormViewState extends State<DynamicFormView>
                 //widget.onValidationChanged?.call(hasValidationErrors);
                 //debugPrint("text oDFV(${widget.entity.name}) → onChanged → hasErrors = $hasValidationErrors");
 
-                debugPrint(
-                    'Field onChanged controller=${widget.controller.hashCode} field=$name value=$v');
+            //    debugPrint(
+             //       'Field onChanged controller=${widget.controller.hashCode} field=$name value=$v');
               }
             : (_) {},
       );
     }
 
     if (field.fieldType == "number") {
+       //final name = field.name;
+       //final key = _normalizeKey(name);
+       //final value = widget.controller.formData[key];
+
+       print("🟦 Number '$name' → key='$key' → value=$value");
+
+        // Sincronizar el controller
+        if (widget.controller.controllers.containsKey(name)) {
+          widget.controller.controllers[name]!.text = value?.toString() ?? "";
+        }
+
+
       return NumberFieldWidget(
         label: field.label,
         controller: widget.controller.controllers[name]!,
@@ -432,6 +487,10 @@ class DynamicFormViewState extends State<DynamicFormView>
     }
 
     if (field.fieldType == "date") {
+    
+
+        print("🟦 Date '$name' → key='$key' → value=$value");
+
       return DynamicDateField(
         label: field.label,
         value: value,
@@ -506,6 +565,18 @@ class DynamicFormViewState extends State<DynamicFormView>
         ],
       ),
     );
+  }
+
+
+String resolveKey(Map<String, dynamic> data, String name) {
+  final camel = name[0].toLowerCase() + name.substring(1);
+  if (data.containsKey(camel)) return camel;
+  if (data.containsKey(name)) return name;
+  return camel; // fallback
+}
+
+  Map<String, dynamic> getCurrentData() {
+    return Map<String, dynamic>.from(widget.controller.formData);
   }
 
   List<FieldDefinition> _getFieldsForTab(
@@ -647,7 +718,7 @@ void revalidate() {
   }
 
   Future<bool> attemptClose() async {
-  debugPrint("attemptClose de dynamic form view");
+  //debugPrint("attemptClose de dynamic form view");
 
   // 1) Si no hay cambios → salir directo
   if (!widget.controller.hasUnsavedChanges) {

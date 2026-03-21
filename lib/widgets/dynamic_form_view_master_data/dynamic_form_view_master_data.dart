@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -63,7 +65,14 @@ class DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
   void initState() {
     super.initState();
 
+    print("🔥 DynamicFormViewMasterData → widget.data = ${widget.data}");
+
     master = MasterDataController(formController: widget.controller);
+    widget.controller.loadInitialData(widget.data);
+
+    //print("🔥 controller.formData = ${widget.controller.formData}");
+    //print("🔥 controller.originalData = ${widget.controller.originalData}");
+
 
     final tabs = [...widget.metadata.tabs]
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
@@ -325,154 +334,163 @@ Widget build(BuildContext context) {
   // ---------------------------------------------
   // TAB LIST (DETALLES)
   // ---------------------------------------------
-  Widget _buildListTab(FormTabMasterData tab) {
-    final listDetail = tab.sections
-        .expand((FormSectionMasterData s) => s.items)
-        .firstWhere(
-          (FormDetailMasterData d) =>
-              d.detailType == 'list' || d.detailType == 'grid',
-          orElse: () =>
-              FormDetailMasterData(detailType: 'list', sortOrder: 0),
-        );
+Widget _buildListTab(FormTabMasterData tab) {
+  final listDetail = tab.sections
+      .expand((s) => s.items)
+      .firstWhere((d) => d.detailType == 'list');
 
-    final relatedEntityName = listDetail.relatedEntity ?? '';
-    if (relatedEntityName.isEmpty) {
-      return const Center(child: Text('Lista sin entidad relacionada'));
-    }
+  final listName = listDetail.listName!;
+  final relatedEntity = listDetail.relatedEntity!;
+  final childEntity = widget.entityMap[relatedEntity];
 
-    final childEntity = widget.entityMap[relatedEntityName];
-    if (childEntity == null) {
-      return Center(
-          child: Text('Entidad hija no encontrada: $relatedEntityName'));
-    }
-
-    final fk = listDetail.foreignKey;
-    final pk = widget.entity.primaryKey;
-    final parentId = widget.data[pk] ??
-        widget.data[pk.toLowerCase()] ??
-        widget.data[pk.toUpperCase()];
-
-    if (fk != null) {
-      childEntity.fields.removeWhere((f) => f.name == fk);
-    }
-
-    return DynamicListView(
-      entity: childEntity,
-      api: widget.api,
-      hiddenColumns: [if (fk != null) fk],
-      parentFilter: fk == null
-          ? null
-          : {
-              fk: {
-                "logic": "AND",
-                "conditions": [
-                  {"operator": "=", "value": parentId, "value2": null}
-                ]
-              }
-            },
-      onEdit: (row) => _openChildPopup(listDetail, childEntity, row),
-      onCreate: () => _openChildPopup(listDetail, childEntity, null),
-    );
+  if (childEntity == null) {
+    return Text("Entidad hija no encontrada: $relatedEntity");
   }
-    // ---------------------------------------------
+
+    // 🔥 Usar resolveKey para detectar camelCase o PascalCase
+  final key = resolveKey(widget.controller.formData, listName);
+
+  // 🔥 Leer la lista desde formData, no desde widget.data
+  final rawList = widget.controller.formData[key];
+
+  // 🔥 Asegurar que sea una lista válida
+  final List<Map<String, dynamic>> items =
+      (rawList is List ? rawList : <Map<String, dynamic>>[])
+          .cast<Map<String, dynamic>>();
+
+  print("🟦 List '$listName' → key='$key' → items=${items.length}");
+
+
+//print("widget data");
+//print(widget.data);
+/*
+// Asegurar que la lista hija exista
+if (widget.data[listName] == null || widget.data[listName] is! List) {
+  widget.data[listName] = <Map<String, dynamic>>[];
+}
+
+final List<Map<String, dynamic>> items =
+    (widget.data[listName] as List).cast<Map<String, dynamic>>();
+
+//print("🟧 List tab '$listName' = ${widget.data[listName]}");
+*/
+  return Column(
+    children: [
+      Expanded(
+        child: ListView.builder(
+          itemCount: items.length,
+          itemBuilder: (_, index) {
+            final row = items[index];
+            return ListTile(
+              title: Text(row["Nombre"] ?? "(sin nombre)"),
+              subtitle: Text(row["Email"] ?? ""),
+              onTap: () {
+                _openChildPopup(listDetail, childEntity, row);
+              },
+            );
+          },
+        ),
+      ),
+      ElevatedButton(
+        onPressed: () {
+          _openChildPopup(listDetail, childEntity, null);
+        },
+        child: const Text("Agregar contacto"),
+      ),
+    ],
+  );
+}
+
+
+String resolveKey(Map<String, dynamic> data, String name) {
+  final camel = name[0].toLowerCase() + name.substring(1);
+  if (data.containsKey(camel)) return camel;
+  if (data.containsKey(name)) return name;
+  return camel; // fallback
+}
+
+ // ---------------------------------------------
   // POPUP HIJO
   // ---------------------------------------------
-  Future<void> _openChildPopup(
-    FormDetailMasterData detail,
-    EntityDefinition childEntity,
-    Map<String, dynamic>? row,
-  ) async {
-    final fk = detail.foreignKey;
+void _openChildPopup(
+  FormDetailMasterData detail,
+  EntityDefinition childEntity,
+  Map<String, dynamic>? existing,
+) async {
+  final controller = DynamicFormController(
+    api: widget.api,
+    entity: childEntity,
+    initialData: existing,
+  );
 
-    final rawColumns = await widget.api.getColumns(childEntity.name);
-    childEntity.fields =
-        rawColumns.map((e) => FieldDefinition.fromJson(e)).toList();
-
-    final pk = widget.entity.primaryKey;
-    final parentId = widget.data[pk] ??
-        widget.data[pk.toLowerCase()] ??
-        widget.data[pk.toUpperCase()];
-
-    final initialData = row ?? {if (fk != null) fk: parentId};
-
-    if (!mounted) return;
-
-    final formKey = GlobalKey<DynamicFormViewState>();
-
-    final controller = DynamicFormController(
-      api: widget.api,
-      entity: childEntity,
-      initialData: initialData,
-    );
-    controller.sessionId = const Uuid().v4();
-    controller.acquireLock = () => widget.api.lockRecord(
-          childEntity.name,
-          controller.recordId!,
-          controller.sessionId,
-        );
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-          insetPadding: const EdgeInsets.all(20),
-          child: SizedBox(
-            width: 600,
-            height: 500,
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () async {
-                      final state = formKey.currentState;
-                      if (state != null) {
-                        final ok = await state.handleExternalClose();
-                        if (!ok) return;
-                      }
-                      Navigator.of(context).pop();
-                    },
-                  ),
+  final edited = await showDialog<Map<String, dynamic>>(
+    context: context,
+    builder: (_) {
+      return Dialog(
+        child: SizedBox(
+          width: 600,
+          child: Column(
+            children: [
+              Expanded(
+                child: DynamicFormView(
+                  api: widget.api,
+                  entity: childEntity,
+                  controller: controller,
+                  initialData: existing,
+                  isSubForm: true,
+                  externalMode:
+                      existing == null ? FormMode.create : FormMode.edit,
+                  onClose: () async {},
                 ),
-                Expanded(
-                  child: DynamicFormView(
-                    controller: controller,
-                    key: formKey,
-                    api: widget.api,
-                    entity: childEntity,
-                    initialData: initialData,
-                    visibleFields: childEntity.fields
-                        .where((f) => f.name != fk)
-                        .map((f) => f.name)
-                        .toList(),
-                    onClose: () async {
-                      Navigator.of(context).pop();
-                    },
-                    onRequestClose: () async {
-                      final state = formKey.currentState;
-                      if (state != null) {
-                        final ok = await state.handleExternalClose();
-                        if (!ok) return false;
-                      }
-                      Navigator.of(context).pop();
-                      return true;
-                    },
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Cancelar"),
                   ),
-                ),
-              ],
-            ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context, controller.formData);
+                    },
+                    child: const Text("Guardar"),
+                  ),
+                ],
+              )
+            ],
           ),
-        );
-      },
-    );
+        ),
+      );
+    },
+  );
+
+  if (edited != null) {
+    _onChildEdited(detail, edited);
+  }
+}
+
+
+void _onChildEdited(FormDetailMasterData detail, Map<String, dynamic> edited) {
+  final list = (widget.data[detail.listName] as List).cast<Map<String, dynamic>>();
+  
+  final pk = detail.primaryKey!;
+  final id = edited[pk];
+
+  final index = list.indexWhere((e) => e[pk] == id);
+
+  if (index != -1) {
+    list[index] = edited;
+  } else {
+    list.add(edited);
   }
 
+  setState(() {}); // refresca la UI
+}
 
 Future<bool> attemptClose() async {
   // 1) Si no hay cambios → salir directo
-  print("🟣 attemptClose() ejecutado en MasterData");
+  //print("🟣 attemptClose() ejecutado en MasterData");
   if (!master.hasUnsavedChanges) return true;
 
   // 2) Preguntar si quiere salir (aunque haya errores)

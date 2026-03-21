@@ -125,10 +125,10 @@ Future<Map<String, dynamic>> saveData(
       ? '$baseUrl/data/$entity'
       : '$baseUrl/data/$entity/$id';
 
-  debugPrint("➡️ saveData() INICIO");
-  debugPrint("URL: $url");
-  debugPrint("DATA: ${jsonEncode(data)}");
-  debugPrint(jsonEncode(data));
+  //debugPrint("➡️ saveData() INICIO");
+  //debugPrint("URL: $url");
+ // debugPrint("DATA: ${jsonEncode(data)}");
+  //debugPrint(jsonEncode(data));
 
   final response = await (id == null
       ? http.post(
@@ -142,8 +142,8 @@ Future<Map<String, dynamic>> saveData(
           body: jsonEncode(data),
         ));
 
-  debugPrint("⬅️ saveData() RESPONSE STATUS: ${response.statusCode}");
-  debugPrint("⬅️ saveData() RESPONSE BODY RAW: '${response.body}'");
+  //debugPrint("⬅️ saveData() RESPONSE STATUS: ${response.statusCode}");
+  //debugPrint("⬅️ saveData() RESPONSE BODY RAW: '${response.body}'");
 
   if (response.statusCode != 200) {
     throw Exception('Error al guardar datos: ${response.body}');
@@ -191,7 +191,7 @@ Future<Map<String, dynamic>> getById(String entity, dynamic id) async {
 
   Future<List<Map<String, dynamic>>?> getColumnVisibility(String entity) async {
   final url = Uri.parse('$baseUrl/column-visibility/$entity');
-print("visibility:$url");
+//print("visibility:$url");
   final response = await http.get(url);
 
   if (response.statusCode == 200) {
@@ -444,6 +444,13 @@ Future<LockStatus> getLockStatus(String entity, int? id) async {
 
   final data = jsonDecode(response.body);
   return LockStatus.fromJson(data);
+}
+
+Future<Map<String, dynamic>> getFullRecord(String entity, int id) async {
+  final response = await http.get(Uri.parse('$baseUrl/data/$entity/$id/full'));
+  //debugPrint("new api $entity $id");
+  //debugPrint(response.body);   
+  return jsonDecode(response.body);
 }
 
 }
