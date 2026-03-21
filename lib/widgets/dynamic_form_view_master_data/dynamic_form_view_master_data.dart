@@ -347,60 +347,43 @@ Widget _buildListTab(FormTabMasterData tab) {
     return Text("Entidad hija no encontrada: $relatedEntity");
   }
 
-    // 🔥 Usar resolveKey para detectar camelCase o PascalCase
+  // 🔥 Detectar camelCase o PascalCase
   final key = resolveKey(widget.controller.formData, listName);
 
-  // 🔥 Leer la lista desde formData, no desde widget.data
   final rawList = widget.controller.formData[key];
-
-  // 🔥 Asegurar que sea una lista válida
   final List<Map<String, dynamic>> items =
       (rawList is List ? rawList : <Map<String, dynamic>>[])
           .cast<Map<String, dynamic>>();
 
   print("🟦 List '$listName' → key='$key' → items=${items.length}");
 
+  // 🔥 Columnas dinámicas
+  final columns = childEntity.fields; // o .where((f) => f.isVisible)
 
-//print("widget data");
-//print(widget.data);
-/*
-// Asegurar que la lista hija exista
-if (widget.data[listName] == null || widget.data[listName] is! List) {
-  widget.data[listName] = <Map<String, dynamic>>[];
-}
-
-final List<Map<String, dynamic>> items =
-    (widget.data[listName] as List).cast<Map<String, dynamic>>();
-
-//print("🟧 List tab '$listName' = ${widget.data[listName]}");
-*/
-  return Column(
-    children: [
-      Expanded(
-        child: ListView.builder(
-          itemCount: items.length,
-          itemBuilder: (_, index) {
-            final row = items[index];
-            return ListTile(
-              title: Text(row["Nombre"] ?? "(sin nombre)"),
-              subtitle: Text(row["Email"] ?? ""),
-              onTap: () {
-                _openChildPopup(listDetail, childEntity, row);
-              },
-            );
-          },
-        ),
-      ),
-      ElevatedButton(
-        onPressed: () {
-          _openChildPopup(listDetail, childEntity, null);
-        },
-        child: const Text("Agregar contacto"),
-      ),
-    ],
+  return SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: DataTable(
+      columns: [
+        for (final col in columns)
+          DataColumn(label: Text(col.label ?? col.name)),
+      ],
+      rows: [
+        for (final row in items)
+          DataRow(
+            cells: [
+              for (final col in columns)
+                DataCell(
+                  Text(resolveFieldValue(row, col.name)),
+                  onTap: () {
+                    _openChildPopup(listDetail, childEntity, row);
+                  },
+                ),
+            ],
+          ),
+      ],
+    ),
   );
 }
-
 
 String resolveKey(Map<String, dynamic> data, String name) {
   final camel = name[0].toLowerCase() + name.substring(1);
@@ -409,6 +392,14 @@ String resolveKey(Map<String, dynamic> data, String name) {
   return camel; // fallback
 }
 
+String resolveFieldValue(Map<String, dynamic> row, String fieldName) {
+  final camel = fieldName[0].toLowerCase() + fieldName.substring(1);
+
+  if (row.containsKey(fieldName)) return row[fieldName]?.toString() ?? "";
+  if (row.containsKey(camel)) return row[camel]?.toString() ?? "";
+
+  return "";
+}
  // ---------------------------------------------
   // POPUP HIJO
   // ---------------------------------------------
