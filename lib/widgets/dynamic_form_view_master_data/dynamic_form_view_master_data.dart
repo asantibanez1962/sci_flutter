@@ -1,15 +1,16 @@
-import 'dart:developer';
+//import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
+//import 'package:uuid/uuid.dart';
 
 import '../../../api/api_client.dart';
 import '../../../models/entity_definition.dart';
-import '../../../models/field_definition.dart';
+//import '../../../models/field_definition.dart';
 
 import '../dynamic_form_view/dynamic_form_view.dart';
 import '../dynamic_form_view/dynamic_form_controller.dart';
-import '../dynamic_list_view/dynamic_list_view.dart';
+import '../dynamic_list_view/dynamic_list_controller.dart';
+import '../dynamic_list_view/dynamic_list_table.dart';
 
 import '../../../models/master_data/form_metadata_master_data.dart';
 import '../../../models/master_data/form_tab_master_data.dart';
@@ -65,7 +66,7 @@ class DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
   void initState() {
     super.initState();
 
-    print("🔥 DynamicFormViewMasterData → widget.data = ${widget.data}");
+    //print("🔥 DynamicFormViewMasterData → widget.data = ${widget.data}");
 
     master = MasterDataController(formController: widget.controller);
     widget.controller.loadInitialData(widget.data);
@@ -86,6 +87,8 @@ class DynamicFormViewMasterDataState extends State<DynamicFormViewMasterData>
 
     _configureMasterController();
   }
+  DynamicListController? _childController;
+  Future<void>? _childInitFuture;
 
   void _configureMasterController() {
     final c = widget.controller;
@@ -181,25 +184,25 @@ Widget build(BuildContext context) {
   return PopScope(
     canPop: !master.hasUnsavedChanges,
     onPopInvokedWithResult: (didPop, result) async {
-       print("🔵 PopScope → onPopInvokedWithResult fired");
-      print("   didPop=$didPop result=$result");
-    print("   master.hasUnsavedChanges=${master.hasUnsavedChanges}");
+    //   print("🔵 PopScope → onPopInvokedWithResult fired");
+   //   print("   didPop=$didPop result=$result");
+  //  print("   master.hasUnsavedChanges=${master.hasUnsavedChanges}");
 
      if (didPop) {
-      print("🔵 PopScope → didPop=true → Flutter ya hizo pop");
+  //    print("🔵 PopScope → didPop=true → Flutter ya hizo pop");
       return;
     }
 
 
       final ok = await attemptClose();
-        print("🔵 PopScope → attemptClose() returned $ok");
+    //    print("🔵 PopScope → attemptClose() returned $ok");
 
 
       if (ok) {
-      print("🔵 PopScope → Navigator.pop()");
+    //  print("🔵 PopScope → Navigator.pop()");
       Navigator.pop(context);
     } else {
-      print("🔵 PopScope → Cancelled exit");
+   //   print("🔵 PopScope → Cancelled exit");
     }
 
     },
@@ -341,48 +344,69 @@ Widget _buildListTab(FormTabMasterData tab) {
 
   final listName = listDetail.listName!;
   final relatedEntity = listDetail.relatedEntity!;
+
   final childEntity = widget.entityMap[relatedEntity];
 
   if (childEntity == null) {
-    return Text("Entidad hija no encontrada: $relatedEntity");
+    return Center(
+      child: Text("No hay metadata para entidad hija: $relatedEntity"),
+    );
   }
 
-  // 🔥 Detectar camelCase o PascalCase
-  final key = resolveKey(widget.controller.formData, listName);
+  return _buildChildList(childEntity, listName);
+}
 
+
+Widget _buildChildList(EntityDefinition childEntity, String listName) {
+  final key = resolveKey(widget.controller.formData, listName);
   final rawList = widget.controller.formData[key];
+
   final List<Map<String, dynamic>> items =
       (rawList is List ? rawList : <Map<String, dynamic>>[])
           .cast<Map<String, dynamic>>();
 
-  print("🟦 List '$listName' → key='$key' → items=${items.length}");
+  // 1️⃣ Crear controller solo una vez
+ // 1️⃣ Nombre del master
+final masterEntityName = widget.entity.name;
 
-  // 🔥 Columnas dinámicas
-  final columns = childEntity.fields; // o .where((f) => f.isVisible)
+// 2️⃣ Buscar en metadata del hijo qué campos son FK hacia el master
+final fkColumns = childEntity.fields
+    .where((f) => f.lookupEntity == masterEntityName)
+    .map((f) => f.name)
+    .toList();
 
-  return SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: DataTable(
-      columns: [
-        for (final col in columns)
-          DataColumn(label: Text(col.label ?? col.name)),
-      ],
-      rows: [
-        for (final row in items)
-          DataRow(
-            cells: [
-              for (final col in columns)
-                DataCell(
-                  Text(resolveFieldValue(row, col.name)),
-                  onTap: () {
-                    _openChildPopup(listDetail, childEntity, row);
-                  },
-                ),
-            ],
-          ),
-      ],
-    ),
+// 3️⃣ Crear controller con columnas ocultas dinámicamente
+_childController ??= DynamicListController(
+  state: this,
+  hiddenColumns: fkColumns,
+);
+
+  // 2️⃣ Ejecutar initWithData solo una vez
+  _childInitFuture ??= _childController!.initWithData(
+    entityName: childEntity.name,
+    rows: items,
+    masterEntityName: widget.entity.name, // ← aquí va el master
   );
+
+  // 3️⃣ FutureBuilder estable
+  return FutureBuilder<void>(
+    future: _childInitFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      return DynamicListTable(
+        controller: _childController!,
+        onEdit: (row) => openChildEditor(childEntity, row),
+      );
+    },
+  );
+}
+
+void openChildEditor(EntityDefinition entity, Map<String, dynamic> row) {
+  // Luego lo conectamos con tu popup/editor real
+  debugPrint("Editar hijo ${entity.name} → $row");
 }
 
 String resolveKey(Map<String, dynamic> data, String name) {

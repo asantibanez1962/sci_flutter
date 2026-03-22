@@ -348,8 +348,8 @@ class DynamicFormViewState extends State<DynamicFormView>
       //final key = _normalizeKey(name);
       //final value = widget.controller.formData[key];
 
-      print("🟦 Lookup '$name' → key='$key' → value=$value");
-      print("🔍 Lookup build → key=$key → value=$value");
+      //print("🟦 Lookup '$name' → key='$key' → value=$value");
+      //print("🔍 Lookup build → key=$key → value=$value");
       final map = widget.controller.lookupData[name] ?? {};
       return LookupFieldBuilder.buildLookupField(
         //key: ValueKey(value),
@@ -390,7 +390,7 @@ class DynamicFormViewState extends State<DynamicFormView>
        //final key = _normalizeKey(name);
        //final value = widget.controller.formData[key];
 
-       print("🟦 Boolean '$name' → key='$key' → value=$value");
+       //print("🟦 Boolean '$name' → key='$key' → value=$value");
 
       return FormField<bool>(
         initialValue: value as bool?,
@@ -424,7 +424,7 @@ class DynamicFormViewState extends State<DynamicFormView>
         //final name = field.name;
         //final key = _normalizeKey(name);
         //final value = widget.controller.formData[key];
-         print("🟦 Field '$name' → key='$key' → value=$value");
+       //  print("🟦 Field '$name' → key='$key' → value=$value");
       // 🔥 Sincronizar el TextEditingController con el valor real
         if (widget.controller.controllers.containsKey(name)) {
           widget.controller.controllers[name]!.text = value?.toString() ?? "";
@@ -489,7 +489,7 @@ class DynamicFormViewState extends State<DynamicFormView>
     if (field.fieldType == "date") {
     
 
-        print("🟦 Date '$name' → key='$key' → value=$value");
+       // print("🟦 Date '$name' → key='$key' → value=$value");
 
       return DynamicDateField(
         label: field.label,

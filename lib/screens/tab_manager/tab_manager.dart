@@ -228,7 +228,6 @@ class _TabManagerState extends State<TabManager>
     final tabId = "edit_${entity.name}_${row[entity.primaryKey]}";
     final id = row[entity.primaryKey];
     final fullData = await widget.api.getFullRecord(entity.name, id);
-
     //final formKey = GlobalKey<DynamicFormViewState>();
     final formKey = GlobalKey<DynamicFormViewMasterDataState>();
     final controller = DynamicFormController(
@@ -277,15 +276,15 @@ class _TabManagerState extends State<TabManager>
         closable: true,
   //      onRequestClose: () async => true,
         onRequestClose: () async {
-           print("🟥 TabItem.onRequestClose ejecutado");
+           //print("🟥 TabItem.onRequestClose ejecutado");
 
             final ok = await formKey.currentState?.attemptClose() ?? true;
-            print("🟥 TabItem.onRequestClose → attemptClose=$ok");
+            //print("🟥 TabItem.onRequestClose → attemptClose=$ok");
 
           return ok;
 },
         builder: () {
-          print("🟦 TabItem.builder ejecutado");
+          //print("🟦 TabItem.builder ejecutado");
 
           return TabViewWrapper(
             child: DynamicFormViewMasterData(
@@ -299,7 +298,7 @@ class _TabManagerState extends State<TabManager>
               controller: controller,
               key: formKey,
               onClose: () async {
-                 print("🟦 DynamicFormViewMasterData.onClose ejecutado");
+                // print("🟦 DynamicFormViewMasterData.onClose ejecutado");
 
                 try {
                   await controller.cancelEditing();

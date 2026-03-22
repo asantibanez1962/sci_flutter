@@ -208,6 +208,7 @@ Future<List<Map<String, dynamic>>> getColumns(String entity) async {
   if (response.statusCode != 200) {
     throw Exception("Error al obtener columnas");
   }
+  //print("get columns");
 //print(response.body);
   return List<Map<String, dynamic>>.from(jsonDecode(response.body));
 }
@@ -264,14 +265,16 @@ Future<FormMetadata> getFormMetadata(String entityName) async {
   final response = await http.get(
     Uri.parse('$baseUrl/metadata/form/$entityName'),
   );
-  //debugPrint("📌 JSON metadata recibido para $entityName:");
+  debugPrint("📌 JSON metadata simple recibido para $entityName:");
   //debugPrint(response.body);   
-
+  
   if (response.statusCode != 200) {
     throw Exception("Error loading form metadata for $entityName");
   }
 
   final jsonData = jsonDecode(response.body);
+  //debugPrint(const JsonEncoder.withIndent('  ').convert(jsonData));
+  //debugPrint("🟥 Metadata  = ${jsonData}");
   return FormMetadata.fromJson(jsonData);
 }
 
@@ -289,7 +292,7 @@ Future<FormMetadataMasterData> getFormMetadataMaster(String entityName) async {
 
   final jsonData = jsonDecode(response.body);
   //debugPrint("=== FORM RESPONSE ===");
- // debubPrint(const JsonEncoder.withIndent('  ').convert(response.data));
+  //debugPrint(const JsonEncoder.withIndent('  ').convert(response.data));
   //debugPrint(const JsonEncoder.withIndent('  ').convert(response.body));
 
   return FormMetadataMasterData.fromJson(jsonData);

@@ -344,6 +344,69 @@ Future<void> applyFilter(ColumnFilter filter) async {
     }
   }
 
+Future<void> initWithData({
+  required String entityName,
+  required List<Map<String, dynamic>> rows,
+  String? masterEntityName,
+}) async {
+  //print("🟩 initWithData() entityName = $entityName");
+//print("🟩 rows recibidas = ${rows.length}");
+//print("🟩 metadataFields antes = ${metadataFields.length}");
+  // 1️⃣ Guardar filas locales (las del master)
+  this.rows = rows;
+
+  // 2️⃣ Cargar metadata de columnas para este entity hijo
+  final rawColumns = await state.widget.api.getColumns(entityName);
+
+//print("🟩 metadataFields después = ${metadataFields.length}");
+//print("🟩 columns construidas = ${columns.length}");
+
+  metadataFields = rawColumns
+      .map<FieldDefinition>((e) => FieldDefinition.fromJson(e))
+      .toList();
+
+  // 3️⃣ Construir columnas igual que en _loadData()
+  columns = metadataFields.map((f) {
+    return ColumnDefinition(
+      field: f.name,
+      label: f.label,
+      visible: true,
+      fieldType: f.dataType,
+    );
+  }).toList();
+
+// 4️⃣ Ocultar columnas según hiddenColumns + FK hacia master (si aplica)
+final autoHidden = <String>[];
+
+if (masterEntityName != null) {
+  for (final f in metadataFields) {
+    if (f.lookupEntity == masterEntityName) {
+      autoHidden.add(f.name);
+    }
+  }
+}
+
+final allHidden = {...hiddenColumns, ...autoHidden}.toList();
+
+print("🕵️‍♂️ masterEntityName=$masterEntityName");
+print("🕵️‍♂️ autoHidden (FK detectadas) = $autoHidden");
+print("🕵️‍♂️ allHidden = $allHidden");
+
+for (var col in columns) {
+  if (allHidden.contains(col.field)) {
+    col.visible = false;
+  }
+}
+
+  // 5️⃣ Cargar lookups igual que en _loadData()
+  await loadLookups();
+
+  // 6️⃣ Notificar UI
+  if (!isDisposed && state.mounted) {
+    state.setState(() {});
+  }
+}
+
   //String inferType(String field) => inferTypeFromRows(field, rows);
 String inferType(String fieldName) {
   final col = columns.firstWhere(
